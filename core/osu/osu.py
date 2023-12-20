@@ -2,7 +2,7 @@ import asyncio
 from aiogram.filters import CommandObject
 from aiogram.types import Message
 
-from core.database.sqlite import Database
+from core.database.database import Database
 from core.osu.osuAPI import OsuApi
 from config_reader import config
 

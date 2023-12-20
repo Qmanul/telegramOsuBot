@@ -82,4 +82,3 @@ class Osu:
             # play_list = self.osuAPI.get_user_recent(user_id=1)
 
     def _gamemode_option_parser(self, options):
-

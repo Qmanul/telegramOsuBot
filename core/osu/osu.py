@@ -2,7 +2,7 @@ import asyncio
 from aiogram.filters import CommandObject
 from aiogram.types import Message
 
-from core.database import sqlite
+from core.database.sqlite import Database
 from core.osu.osuAPI import OsuApi
 from config_reader import config
 
@@ -13,6 +13,7 @@ class Osu:
             official_client_id=int(config.client_id.get_secret_value()),
             official_client_secret=config.client_secret.get_secret_value()
         )
+        self.db = Database()
 
     async def set_user(self, message: Message, command: CommandObject):
         if command.args is None:
@@ -29,7 +30,7 @@ class Osu:
                 'username': None,
                 'user_id': None
             }
-            await sqlite.update_user(user.id, user_update)
+            await self.db.update_user(user.id, user_update)
             await message.answer('{}, your username has been removed.'.format(
                 user.first_name))
             return
@@ -46,8 +47,8 @@ class Osu:
         if not osu_user:
             await message.answer("{} doesn't exists".format(username))
 
-        if not await sqlite.check_user_exists(user.id):
-            await sqlite.create_new_user(user, osu_user)
+        if not await self.db.check_user_exists(user.id):
+            await self.db.create_new_user(user, osu_user)
             await message.answer('{}, your account has been linked to `{}`.'.format(
                 user.first_name, osu_user['username']
             ))
@@ -56,7 +57,7 @@ class Osu:
                 'user_id': osu_user['id'],
                 'username': osu_user['username']
             }
-            await sqlite.update_user(user.id, user_update)
+            await self.db.update_user(user.id, user_update)
             await message.answer('{}, your username has been edited to `{}`'.format(
                 user.first_name, osu_user['username']
             ))
@@ -68,7 +69,7 @@ class Osu:
     async def process_user_recent(self, message: Message, options):
         user = message.from_user
 
-        db_user = await sqlite.get_user(user.id)
+        db_user = await self.db.get_user(user.id)
 
         if db_user:
             gamemode = int(db_user['gamemode'])

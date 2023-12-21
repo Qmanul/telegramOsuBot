@@ -44,6 +44,6 @@ class Database:
 
     async def get_user(self, user_id):
         async with aiosqlite.connect(self.db_path) as db:
-            async with db.execute(
-                    "SELECT * FROM profile WHERE telegram_user_id = '{user_id}'".format(user_id=user_id)) as cur:
+            async with db.execute("SELECT * FROM profile WHERE telegram_user_id = '{user_id}'".format(
+                    user_id=user_id)) as cur:
                 return await cur.fetchone()

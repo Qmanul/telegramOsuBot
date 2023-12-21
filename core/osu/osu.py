@@ -71,24 +71,56 @@ class Osu:
         user = message.from_user
 
         db_user = await self.db.get_user(user.id)
+        db_user = {
+            'telegram_user_id': db_user[0],
+            'username': db_user[1],
+            'user_id': db_user[2],
+            'gamemode': db_user[3]
+        }
 
+        try:
+            outputs, option_gamemode = self._gamemode_option_parser(options)
+            option_parser = OptionParser()
+            option_parser.add_option('b', 'best', opt_type=None, default=False)
+            option_parser.add_option('m', 'gamemode', opt_type='str', default=None)
+            option_parser.add_option('ps', 'pass', opt_type=None, default=None)
+            option_parser.add_option('p', 'page', opt_type=int, default=None)
+            option_parser.add_option('i', 'index', opt_type='range', default=None)
+            option_parser.add_option('?', 'search', opt_type='str', default=None)
+            option_parser.add_option('np', 'now_playing', opt_type='str', default=False)
+            option_parser.add_option('g', 'graph', opt_type=None, default=False)
+            option_parser.add_option('l', 'list', opt_type=None, default=False)
+            option_parser.add_option('10', 'cond_10', opt_type=None, default=False)
+            option_parser.add_option('im', 'image', opt_type=None, default=False)
+            option_parser.add_option('u', 'user', opt_type=None, default=False)
+            usernames, options = option_parser.parse(outputs)
+        except TypeError:
+            await message.answer('Please check your inputs for errors!')
+            return
+
+        usernames = list(set(usernames))
+        if not usernames:
+            username = db_user['username']
+        else:
+            username = usernames[0]
+
+        gamemode = None
+        if option_gamemode:
+            gamemode = option_gamemode
+        if options['gamemode']:
+            gamemode = int(option_gamemode)
         if db_user:
             gamemode = int(db_user['gamemode'])
-        else:
+        if gamemode is None:
             gamemode = 0
-
-        # userinfo = self.osuAPI.get_user()
-
-        # try:
-            # play_list = self.osuAPI.get_user_recent(user_id=1)
 
     def _gamemode_option_parser(self, inputs):
         option_parser = OptionParser()
-        option_parser.add_option('std',     '0',    opt_type=None,  default=False)
-        option_parser.add_option('osu',     '0',    opt_type=None,  default=False)
-        option_parser.add_option('taiko',   '1',    opt_type=None,  default=False)
-        option_parser.add_option('ctb',     '2',    opt_type=None,  default=False)
-        option_parser.add_option('mania',   '3',    opt_type=None,  default=False)
+        option_parser.add_option('std', '0', opt_type=None, default=False)
+        option_parser.add_option('osu', '0', opt_type=None, default=False)
+        option_parser.add_option('taiko', '1', opt_type=None, default=False)
+        option_parser.add_option('ctb', '2', opt_type=None, default=False)
+        option_parser.add_option('mania', '3', opt_type=None, default=False)
         outputs, options = option_parser.parse(inputs)
 
         gamemode = None

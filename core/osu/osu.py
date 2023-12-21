@@ -2,6 +2,7 @@ import asyncio
 from aiogram.filters import CommandObject
 from aiogram.types import Message
 
+from core.utils.option_parser import OptionParser
 from core.database.database import Database
 from core.osu.osuAPI import OsuApi
 from config_reader import config
@@ -81,4 +82,18 @@ class Osu:
         # try:
             # play_list = self.osuAPI.get_user_recent(user_id=1)
 
-    def _gamemode_option_parser(self, options):
+    def _gamemode_option_parser(self, inputs):
+        option_parser = OptionParser()
+        option_parser.add_option('std',     '0',    opt_type=None,  default=False)
+        option_parser.add_option('osu',     '0',    opt_type=None,  default=False)
+        option_parser.add_option('taiko',   '1',    opt_type=None,  default=False)
+        option_parser.add_option('ctb',     '2',    opt_type=None,  default=False)
+        option_parser.add_option('mania',   '3',    opt_type=None,  default=False)
+        outputs, options = option_parser.parse(inputs)
+
+        gamemode = None
+        for option in options:
+            if options[option]:
+                gamemode = int(option)
+
+        return outputs, gamemode

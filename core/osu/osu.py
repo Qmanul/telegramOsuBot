@@ -63,15 +63,12 @@ class Osu:
                 user.first_name, osu_user['username']
             ))
 
-    async def recent(self, message: Message, command: CommandObject):
-        options = command.args
-        await self.process_user_recent(message, options)
-
+    # get user's recent score
     async def process_user_recent(self, message: Message, options):
         user = message.from_user
 
         db_user = await self.db.get_user(user.id)
-        db_user = {
+        db_user = {  # fuck tuples
             'telegram_user_id': db_user[0],
             'username': db_user[1],
             'user_id': db_user[2],
@@ -88,11 +85,9 @@ class Osu:
             option_parser.add_option('i', 'index', opt_type='range', default=None)
             option_parser.add_option('?', 'search', opt_type='str', default=None)
             option_parser.add_option('np', 'now_playing', opt_type='str', default=False)
-            option_parser.add_option('g', 'graph', opt_type=None, default=False)
+            # option_parser.add_option('g', 'graph', opt_type=None, default=False)  maybe
             option_parser.add_option('l', 'list', opt_type=None, default=False)
-            option_parser.add_option('10', 'cond_10', opt_type=None, default=False)
-            option_parser.add_option('im', 'image', opt_type=None, default=False)
-            option_parser.add_option('u', 'user', opt_type=None, default=False)
+            # option_parser.add_option('im', 'image', opt_type=None, default=False)  no
             usernames, options = option_parser.parse(outputs)
         except TypeError:
             await message.answer('Please check your inputs for errors!')
@@ -113,6 +108,27 @@ class Osu:
             gamemode = int(db_user['gamemode'])
         if gamemode is None:
             gamemode = 0
+
+        if options['best']:
+            pass
+
+        elif options['now_playing']:
+            pass
+
+        if options['pass']:
+            pass
+
+        if options['page']:
+            pass
+
+        if options['index']:
+            pass
+
+        if options['search']:
+            pass
+
+        if options['list']:
+            pass
 
     def _gamemode_option_parser(self, inputs):
         option_parser = OptionParser()

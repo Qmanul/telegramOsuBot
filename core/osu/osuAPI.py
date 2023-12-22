@@ -43,6 +43,23 @@ class OsuApi(object):
         self.log_request(request_name, api)
         return res
 
+    async def get_user_best(self, user_id,mode=0,
+                            limit=100,api='bancho'):
+        request_name = 'get_user_best'
+        api_obj = self.get_api(api)
+        res = await api_obj.get_user_best(user=user_id, mode=mode, limit=limit)
+
+        self.log_request(request_name, api)
+        return res
+
+    async def get_user_recent_activity(self, user_id, limit=50, api='bancho'):
+        request_name = 'get_user_recent_activity'
+        api_obj = self.get_api(api)
+        res = await api_obj.get_user_recent_activity(user_id=user_id, limit=limit)
+
+        self.log_request(request_name, api)
+        return res
+
     def get_api(self, api_name):
         return self.api_dict[api_name]
 
@@ -85,9 +102,9 @@ class officialAPIV2(object):
 
         return res
 
-    async def get_user_best(self, user_id, mode=0, limit=100, offset=0):
+    async def get_user_best(self, user, mode=0, limit=100, offset=0):
         mode_text = self.mode_to_text(mode)
-        uri_base = 'users/{}/scores/best'.format(user_id)
+        uri_base = 'users/{}/scores/best'.format(user)
 
         uri_builder = URIBuilder(uri_base)
         uri_builder.add_parameter('mode', mode_text)
@@ -139,6 +156,7 @@ class officialAPIV2(object):
         uri = "https://osu.ppy.sh/oauth/token"
 
         res = await self.post(uri, payload, get_token=True)
+        print(res)
         self.token = res['access_token']
         self.token_expire = datetime.datetime.now().timestamp() + int(res['expires_in'])
 

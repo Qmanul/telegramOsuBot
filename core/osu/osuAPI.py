@@ -11,7 +11,6 @@ class OsuApi(object):
             'bancho': self.official_api_v2
         }
 
-        self.LOG_INTERVAL = 60
         self.last_log = time.time()
         self.request_counter = {}
 
@@ -52,12 +51,12 @@ class officialAPIV2(object):
     def __init__(self, client_id, client_secret):
         self.name = "Bancho"
         self.base = "https://osu.ppy.sh/api/v2/{}"
-        self.user_base = "https://osu.ppy.sh/api/v2/users/{}"
         self.client_id = client_id
         self.client_secret = client_secret
         self.token = None
         self.token_expire = None
         self.mode_dict = {0: 'osu', 1: 'taiko', 2: 'fruits', 3: 'mania'}
+        self.max_per_page = 50
 
     # users
     async def get_user(self, user, mode):
@@ -72,23 +71,20 @@ class officialAPIV2(object):
                               include_fails=True, mode=0, limit=50, offset=0):
 
         mode_text = self.mode_to_text(mode)
-        uri_base = 'users/{}/scores/recent?'.format(user)
+        uri_base = 'users/{}/scores/recent'.format(user)
 
-        MAX_PER_PAGE = 50
         total_res = []
 
-        for i in range(round(limit / MAX_PER_PAGE)):
-            offset = i if i == 0 else i * MAX_PER_PAGE
+        uri_builder = URIBuilder(uri_base)
+        uri_builder.add_parameter('include_fails',  include_fails)
+        uri_builder.add_parameter('mode',           mode_text)
+        uri_builder.add_parameter('limit',          limit)
+        uri_builder.add_parameter('offset',         offset)
 
-            uri_builder = URIBuilder(uri_base)
-            uri_builder.add_parameter('include_fails', include_fails)
-            uri_builder.add_parameter('mode', mode_text)
-            uri_builder.add_parameter('limit', MAX_PER_PAGE)
-            uri_builder.add_parameter('offset', offset)
-            url = self.base.format(uri_builder.uri)
+        url = self.base.format(uri_builder.uri)
 
-            res = await self.fetch(url)
-            total_res.extend(res)
+        res = await self.fetch(url)
+        total_res.extend(res)
 
         return total_res
 

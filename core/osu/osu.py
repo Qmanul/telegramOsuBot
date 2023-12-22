@@ -47,6 +47,7 @@ class Osu:
 
         if not osu_user:
             await message.answer("{} doesn't exists".format(username))
+            return
 
         if not await self.db.check_user_exists(user.id):
             await self.db.create_new_user(user, osu_user)

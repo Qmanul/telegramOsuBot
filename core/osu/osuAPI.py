@@ -73,20 +73,47 @@ class officialAPIV2(object):
         mode_text = self.mode_to_text(mode)
         uri_base = 'users/{}/scores/recent'.format(user)
 
-        total_res = []
-
         uri_builder = URIBuilder(uri_base)
-        uri_builder.add_parameter('include_fails',  include_fails)
-        uri_builder.add_parameter('mode',           mode_text)
-        uri_builder.add_parameter('limit',          limit)
-        uri_builder.add_parameter('offset',         offset)
+        uri_builder.add_parameter('include_fails', include_fails)
+        uri_builder.add_parameter('mode', mode_text)
+        uri_builder.add_parameter('limit', limit)
+        uri_builder.add_parameter('offset', offset)
 
         url = self.base.format(uri_builder.uri)
 
         res = await self.fetch(url)
-        total_res.extend(res)
 
-        return total_res
+        return res
+
+    async def get_user_best(self, user_id, mode=0, limit=100, offset=0):
+        mode_text = self.mode_to_text(mode)
+        uri_base = 'users/{}/scores/best'.format(user_id)
+
+        uri_builder = URIBuilder(uri_base)
+        uri_builder.add_parameter('mode', mode_text)
+        uri_builder.add_parameter('limit', limit)
+        uri_builder.add_parameter('offset', offset)
+
+        url = self.base.format(uri_builder.uri)
+
+        res = await self.fetch(url)
+
+        return res
+
+    async def get_user_firsts(self, user_id, mode=0, limit=50, offset=0):
+        mode_text = self.mode_to_text(mode)
+        uri_base = 'users/{}/scores/firsts'.format(user_id)
+
+        uri_builder = URIBuilder(uri_base)
+        uri_builder.add_parameter('mode', mode_text)
+        uri_builder.add_parameter('limit', limit)
+        uri_builder.add_parameter('offset', offset)
+
+        url = self.base.format(uri_builder.uri)
+
+        res = await self.fetch(url)
+
+        return res
 
     # request
     async def get_token(self):

@@ -3,5 +3,5 @@
 *.db
 .idea
 **/__pycache__/
-/test/
+**/test/
 **/utils/

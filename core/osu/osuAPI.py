@@ -45,8 +45,8 @@ class OsuApi(object):
         self.log_request(request_name, api)
         return res
 
-    async def get_user_best(self, user_id,mode=0,
-                            limit=100,api='bancho'):
+    async def get_user_best(self, user_id, mode=0,
+                            limit=100, api='bancho'):
         request_name = 'get_user_best'
         api_obj = self.get_api(api)
         res = await api_obj.get_user_best(user=user_id, mode=mode, limit=limit)
@@ -90,7 +90,7 @@ class officialAPIV2(object):
                               include_fails=True, mode=0, limit=50, offset=0):
 
         mode_text = self.mode_to_text(mode)
-        uri_base = 'users/{}/scores/recent'.format(user)
+        uri_base = 'users/{}/scores/recent?'.format(user)
 
         uri_builder = URIBuilder(uri_base)
         uri_builder.add_parameter('include_fails', include_fails)
@@ -106,7 +106,7 @@ class officialAPIV2(object):
 
     async def get_user_best(self, user, mode=0, limit=100, offset=0):
         mode_text = self.mode_to_text(mode)
-        uri_base = 'users/{}/scores/best'.format(user)
+        uri_base = 'users/{}/scores/best?'.format(user)
 
         uri_builder = URIBuilder(uri_base)
         uri_builder.add_parameter('mode', mode_text)
@@ -121,7 +121,7 @@ class officialAPIV2(object):
 
     async def get_user_firsts(self, user_id, mode=0, limit=50, offset=0):
         mode_text = self.mode_to_text(mode)
-        uri_base = 'users/{}/scores/firsts'.format(user_id)
+        uri_base = 'users/{}/scores/firsts?'.format(user_id)
 
         uri_builder = URIBuilder(uri_base)
         uri_builder.add_parameter('mode', mode_text)
@@ -135,7 +135,7 @@ class officialAPIV2(object):
         return res
 
     async def get_user_recent_activity(self, user_id, limit=50, offset=0):
-        uri_base = 'users/{}/recent_activity'.format(user_id)
+        uri_base = 'users/{}/recent_activity?'.format(user_id)
 
         uri_builder = URIBuilder(uri_base)
         uri_builder.add_parameter('limit', limit)
@@ -200,5 +200,3 @@ class officialAPIV2(object):
 
     def mode_to_text(self, mode):
         return self.mode_dict[mode]
-
-

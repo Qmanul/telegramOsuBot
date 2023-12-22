@@ -115,6 +115,19 @@ class officialAPIV2(object):
 
         return res
 
+    async def get_user_recent_activity(self, user_id, limit=50, offset=0):
+        uri_base = 'users/{}/recent_activity'.format(user_id)
+
+        uri_builder = URIBuilder(uri_base)
+        uri_builder.add_parameter('limit', limit)
+        uri_builder.add_parameter('offset', offset)
+
+        url = self.base.format(uri_builder.uri)
+
+        res = await self.fetch(url)
+
+        return res
+
     # request
     async def get_token(self):
         payload = {

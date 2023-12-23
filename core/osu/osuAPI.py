@@ -86,7 +86,7 @@ class officialAPIV2(object):
         self.mode_dict = {0: 'osu', 1: 'taiko', 2: 'fruits', 3: 'mania'}
         self.max_per_page = 50
 
-    # users
+    # user
     async def get_user(self, user, mode):
         mode_text = self.mode_to_text(mode)
         uri_base = 'users/{}/{}'.format(user, mode_text)
@@ -155,6 +155,31 @@ class officialAPIV2(object):
         res = await self.fetch(url)
 
         return res
+
+    async def get_user_beatmaps(self, user_id, limit=50,
+                                offset=0, bmap_type='ranked'):
+        uri_base = 'users/{user}/beatmapsets/{type}?'.format(user=user_id, type=bmap_type)
+
+        uri_builder = URIBuilder(uri_base)
+        uri_builder.add_parameter('limit', limit)
+        uri_builder.add_parameter('offset', offset)
+
+        url = self.base.format(uri_builder.uri)
+
+        res = await self.fetch(url)
+
+        return res
+
+    # beatmaps
+    async def get_beatmps(self, bmap_id):
+        uri_base = 'beatmaps/{beatmap}?'.format(beatmap=bmap_id)
+
+        url = self.base.format(uri_builder.uri)
+
+        res = await self.fetch(url)
+
+        return res
+
 
     # request
     async def get_token(self):

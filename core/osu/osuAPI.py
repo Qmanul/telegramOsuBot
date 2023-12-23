@@ -54,6 +54,15 @@ class OsuApi(object):
         self.log_request(request_name, api)
         return res
 
+    async def get_user_firsts(self, user_id, mode=0,
+                              limit=100, api='bancho'):
+        request_name = 'get_user_firsts'
+        api_obj = self.get_api(api)
+        res = await api_obj.get_user_firsts(user=user_id, mode=mode, limit=limit)
+
+        self.log_request(request_name, api)
+        return res
+
     async def get_user_recent_activity(self, user_id, limit=50, api='bancho'):
         request_name = 'get_user_recent_activity'
         api_obj = self.get_api(api)

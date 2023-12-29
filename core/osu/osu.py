@@ -1,4 +1,6 @@
 import asyncio
+
+from aiogram.enums import ParseMode
 from aiogram.filters import CommandObject
 from aiogram.types import Message
 from aiogram.utils.markdown import hlink
@@ -7,6 +9,7 @@ from core.utils.option_parser import OptionParser
 from core.database.database import Database
 from core.osu.osuAPI import OsuApi
 from config_reader import config
+from core.osu import osu_utils
 
 
 class Osu:
@@ -119,7 +122,6 @@ class Osu:
             if not user_recent_list:
                 await message.answer('{} has no recent plays for {}'.format(user_info['username'], gamemode))
             play_fin = user_recent_list[0]
-            print(play_fin)
 
         if options['pass']:
             pass
@@ -139,18 +141,30 @@ class Osu:
         await self.create_recent_answer(message, user_info, play_fin, gamemode)
 
     async def create_recent_answer(self, message: Message, user_info, play_info, gamemode):
-        beatmap_statistics = play_info['statistics']
-        beatmap_info = play_info['beatmap']
-        beatmapset_info = play_info['beatmapset']
+        answer = ''
+        play_statistics = play_info['statistics']
+        beatmap = await self.osuAPI.get_beatmap(play_info['beatmap']['id'])
 
-        header = 'Recent {} play for {}:\n'.format(gamemode, user_info['username'])
+        header = 'Recent {} play for {}:\n'.format(osu_utils.beautify_mode_text(gamemode), user_info['username'])
+        answer += header
+
+        mods = ''.join(play_info['mods']) if play_info['mods'] else 'NoMod'
         title = '{}{}+{}[{}]\n'.format(
-            beatmapset_info['title'], beatmap_info['version'], ''.join(play_info['mods']), beatmap_info['difficulty_rating'])
-        text = '>{mark}({complietion_if_failed}) > {pp_count}PP > {accuracy}%\n'\
-               '> {score_count} > x{combo} / {max_combo} > [{300_count} / {100_count} / {50_count} / {miss_count}]'
+            beatmap['beatmapset']['title'], beatmap['version'], mods,
+            beatmap['difficulty_rating'])
+        title_fin = hlink(title, beatmap['url'])
+        answer += title_fin
 
-        title_fin = hlink(title, beatmap_info['url'])
-        return True
+        play_pp = play_info['pp'] if play_info['pp'] is not None else 0
+
+        text = '> {} > {:0.2f}PP > {:0.2f}%\n> {} > x{}/{} > [{}/{}/{}/ {}]'.format(
+            play_info['rank'], play_pp, play_info['accuracy'] * 100, play_info['score'], play_info['max_combo'],
+            beatmap['max_combo'], play_statistics['count_300'], play_statistics['count_100'],
+            play_statistics['count_50'], play_statistics['count_miss']
+        )
+        answer += text
+
+        await message.answer(answer, parse_mode=ParseMode.HTML)
 
     def _gamemode_option_parser(self, inputs):
         option_parser = OptionParser()

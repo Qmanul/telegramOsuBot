@@ -71,7 +71,11 @@ class OsuApi(object):
         self.log_request(request_name, api)
         return res
 
-    # async def download_beatmapset_osz(self):
+    async def get_beatmap(self, bmap_id, api='bancho'):
+        request_name = 'get_beatmap'
+        api_obj = self.get_api(api)
+        res = await api_obj.get_beatmap(bmap_id=bmap_id)
+        return res
 
     def get_api(self, api_name):
         return self.api_dict[api_name]

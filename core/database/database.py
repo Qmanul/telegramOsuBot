@@ -4,7 +4,7 @@ from config_reader import config
 
 class Database:
     def __init__(self):
-        self.db_path = config.database_path.get_secret_value()
+        self.db_path = config.user_database_path.get_secret_value()
 
     async def db_start(self):
         async with aiosqlite.connect(self.db_path) as db:

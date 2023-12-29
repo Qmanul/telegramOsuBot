@@ -20,10 +20,12 @@ def mod_to_number(passed_mods: list):
         if mod not in mods:
             continue
         res += 1 << mods.index(mod)
-    return res
+    return int(res)
 
 
 def calculate_pp(bmp, mods=0):
-    pyttanko.diff_calc().calc(bmap=bmp, mods=mods)
-
+    if isinstance(mods, list):
+        mods = mod_to_number(mods)
+    stars = pyttanko.diff_calc().calc(bmap=bmp, mods=mods)
+    pp, _, _, _, _ = pyttanko.ppv2()
     return True

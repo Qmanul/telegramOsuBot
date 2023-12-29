@@ -6,7 +6,7 @@ from aiogram.types import Message
 from aiogram.utils.markdown import hlink
 
 from core.utils.option_parser import OptionParser
-from core.database.database import Database
+from core.database.database import UserDatabase
 from core.osu.osuAPI import OsuApi
 from config_reader import config
 from core.osu import osu_utils
@@ -18,7 +18,7 @@ class Osu:
             official_client_id=int(config.client_id.get_secret_value()),
             official_client_secret=config.client_secret.get_secret_value()
         )
-        self.db = Database()
+        self.user_db = UserDatabase()
         self.gamemodes = ['osu', 'taiko', 'fruits', 'mania']
 
     async def set_user(self, message: Message, command: CommandObject):
@@ -36,7 +36,7 @@ class Osu:
                 'username': None,
                 'user_id': None
             }
-            await self.db.update_user(user.id, user_update)
+            await self.user_db.update_user(user.id, user_update)
             await message.answer('{}, your username has been removed.'.format(
                 user.first_name))
             return
@@ -53,8 +53,8 @@ class Osu:
             await message.answer("{} doesn't exists".format(username))
             return
 
-        if not await self.db.check_user_exists(user.id):
-            await self.db.create_new_user(user, osu_user)
+        if not await self.user_db.check_user_exists(user.id):
+            await self.user_db.create_new_user(user, osu_user)
             await message.answer('{}, your account has been linked to `{}`.'.format(
                 user.first_name, osu_user['username']
             ))
@@ -63,7 +63,7 @@ class Osu:
                 'user_id': osu_user['id'],
                 'username': osu_user['username']
             }
-            await self.db.update_user(user.id, user_update)
+            await self.user_db.update_user(user.id, user_update)
             await message.answer('{}, your username has been edited to `{}`'.format(
                 user.first_name, osu_user['username']
             ))
@@ -75,7 +75,7 @@ class Osu:
         if options.args:
             inputs = options.args.split()
 
-        db_user = await self.db.get_user(user.id)
+        db_user = await self.user_db.get_user(user.id)
         if db_user:
             db_user = {  # fuck tuples
                 'telegram_user_id': db_user[0],

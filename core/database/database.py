@@ -2,7 +2,7 @@ import aiosqlite
 from config_reader import config
 
 
-class Database:
+class UserDatabase:
     def __init__(self):
         self.db_path = config.user_database_path.get_secret_value()
 

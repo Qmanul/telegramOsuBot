@@ -7,7 +7,6 @@ class Settings(BaseSettings):
     client_id: SecretStr
     client_secret: SecretStr
     user_database_path: SecretStr
-    beatmap_database_path: SecretStr
 
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
 

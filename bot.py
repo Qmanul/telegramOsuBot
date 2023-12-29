@@ -3,15 +3,14 @@ import logging
 from aiogram import Bot, Dispatcher
 
 from config_reader import config
-from core.database.database import Database
+from core.database.database import UserDatabase
 from core.handlers import user_link, user_scores
 
 
 async def main():
     logging.basicConfig(level=logging.INFO)
 
-    db = Database()
-    await db.db_start()
+    await UserDatabase().db_start()
 
     dp = Dispatcher()
     bot = Bot(token=config.bot_token.get_secret_value())

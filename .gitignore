@@ -4,4 +4,3 @@
 .idea
 **/__pycache__/
 **/test/
-**/utils/

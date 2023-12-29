@@ -71,6 +71,8 @@ class OsuApi(object):
         self.log_request(request_name, api)
         return res
 
+    # async def download_beatmapset_osz(self):
+
     def get_api(self, api_name):
         return self.api_dict[api_name]
 
@@ -79,6 +81,7 @@ class officialAPIV2(object):
     def __init__(self, client_id, client_secret):
         self.name = "Bancho"
         self.base = "https://osu.ppy.sh/api/v2/{}"
+        self.download_beatmap = 'https://osu.ppy.sh/beatmapsets/{}/download?noVideo=1'
         self.client_id = client_id
         self.client_secret = client_secret
         self.token = None
@@ -88,56 +91,56 @@ class officialAPIV2(object):
 
     # user
     async def get_user(self, user, mode):
-        mode_text = self.mode_to_text(mode)
-        uri_base = 'users/{}/{}'.format(user, mode_text)
+        # mode_text = self.mode_to_text(mode)
+        uri_base = 'users/{}/{}'.format(user, mode)
         uri_builder = URIBuilder(uri_base)
-        uri = self.base.format(uri_builder.uri)
+        uri = self.base.format(uri_builder.get_uri())
         res = await self.fetch(uri)
         return res
 
     async def get_user_recent(self, user,
                               include_fails=True, mode=0, limit=50, offset=0):
 
-        mode_text = self.mode_to_text(mode)
+        # mode_text = self.mode_to_text(mode)
         uri_base = 'users/{}/scores/recent?'.format(user)
 
         uri_builder = URIBuilder(uri_base)
         uri_builder.add_parameter('include_fails', include_fails)
-        uri_builder.add_parameter('mode', mode_text)
+        uri_builder.add_parameter('mode', mode)
         uri_builder.add_parameter('limit', limit)
         uri_builder.add_parameter('offset', offset)
 
-        url = self.base.format(uri_builder.uri)
+        url = self.base.format(uri_builder.get_uri())
 
         res = await self.fetch(url)
 
         return res
 
     async def get_user_best(self, user, mode=0, limit=100, offset=0):
-        mode_text = self.mode_to_text(mode)
+        # mode_text = self.mode_to_text(mode)
         uri_base = 'users/{}/scores/best?'.format(user)
 
         uri_builder = URIBuilder(uri_base)
-        uri_builder.add_parameter('mode', mode_text)
+        uri_builder.add_parameter('mode', mode)
         uri_builder.add_parameter('limit', limit)
         uri_builder.add_parameter('offset', offset)
 
-        url = self.base.format(uri_builder.uri)
+        url = self.base.format(uri_builder.get_uri())
 
         res = await self.fetch(url)
 
         return res
 
     async def get_user_firsts(self, user_id, mode=0, limit=50, offset=0):
-        mode_text = self.mode_to_text(mode)
+        # mode_text = self.mode_to_text(mode)
         uri_base = 'users/{}/scores/firsts?'.format(user_id)
 
         uri_builder = URIBuilder(uri_base)
-        uri_builder.add_parameter('mode', mode_text)
+        uri_builder.add_parameter('mode', mode)
         uri_builder.add_parameter('limit', limit)
         uri_builder.add_parameter('offset', offset)
 
-        url = self.base.format(uri_builder.uri)
+        url = self.base.format(uri_builder.get_uri())
 
         res = await self.fetch(url)
 
@@ -150,7 +153,7 @@ class officialAPIV2(object):
         uri_builder.add_parameter('limit', limit)
         uri_builder.add_parameter('offset', offset)
 
-        url = self.base.format(uri_builder.uri)
+        url = self.base.format(uri_builder.get_uri())
 
         res = await self.fetch(url)
 
@@ -164,22 +167,30 @@ class officialAPIV2(object):
         uri_builder.add_parameter('limit', limit)
         uri_builder.add_parameter('offset', offset)
 
-        url = self.base.format(uri_builder.uri)
+        url = self.base.format(uri_builder.get_uri())
 
         res = await self.fetch(url)
 
         return res
 
     # beatmaps
-    async def get_beatmps(self, bmap_id):
+    async def get_beatmap(self, bmap_id):
         uri_base = 'beatmaps/{beatmap}?'.format(beatmap=bmap_id)
 
-        url = self.base.format(uri_builder.uri)
+        url = self.base.format(uri_base)
 
         res = await self.fetch(url)
 
         return res
 
+    async def get_beatmapset(self, bmapset_id):
+        uri_base = 'beatmapsets/{beatmapset}?'.format(beatmapset=bmapset_id)
+
+        url = self.base.format(uri_base)
+
+        res = await self.fetch(url)
+
+        return res
 
     # request
     async def get_token(self):

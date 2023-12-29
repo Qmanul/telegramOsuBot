@@ -1,7 +1,14 @@
 from aiogram import Router
 from aiogram.filters import Command, CommandObject
 from aiogram import types
-from aiogram.utils.markdown import hide_link, hlink
-from emoji import emojize
 
-from core.osu.osuAPI import OsuApi
+from core.osu.osu import Osu
+
+
+router = Router()
+osu = Osu()
+
+
+@router.message(Command("recent", prefix=">"))
+async def cmd_recent(message: types.Message, command: CommandObject):
+    await osu.process_user_recent(message, command)

@@ -10,7 +10,7 @@ class Database:
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute("CREATE TABLE IF NOT EXISTS profile"
                              "(telegram_user_id TEXT PRIMARY KEY NOT NULL,"
-                             "username TEXT, user_id TEXT, gamemode TINYINT)")
+                             "username TEXT, user_id TEXT, gamemode TEXT)")
             await db.commit()
 
     async def update_user(self, user_id, update):
@@ -26,7 +26,7 @@ class Database:
             'telegram_user_id': user.id,
             'username': osu_user['username'],
             'user_id': str(osu_user['id']),
-            'gamemode': 0
+            'gamemode': 'osu'
         }
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute("INSERT INTO profile(telegram_user_id, username, user_id, gamemode)"

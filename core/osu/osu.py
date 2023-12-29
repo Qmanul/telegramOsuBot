@@ -1,6 +1,7 @@
 import asyncio
 from aiogram.filters import CommandObject
 from aiogram.types import Message
+from aiogram.utils.markdown import hlink
 
 from core.utils.option_parser import OptionParser
 from core.database.database import Database
@@ -15,6 +16,7 @@ class Osu:
             official_client_secret=config.client_secret.get_secret_value()
         )
         self.db = Database()
+        self.gamemodes = ['osu', 'taiko', 'fruits', 'mania']
 
     async def set_user(self, message: Message, command: CommandObject):
         if command.args is None:
@@ -36,10 +38,9 @@ class Osu:
                 user.first_name))
             return
 
-        gamemodes = [0, 1, 2, 3]
         osu_user = None
 
-        for gamemode in gamemodes:
+        for gamemode in self.gamemodes:
             osu_user = await self.osuAPI.get_user(username, gamemode)
             if osu_user:
                 break
@@ -65,56 +66,60 @@ class Osu:
             ))
 
     # get user's recent score
-    async def process_user_recent(self, message: Message, options):
+    async def process_user_recent(self, message: Message, options: CommandObject):
         user = message.from_user
+        inputs = []
+        if options.args:
+            inputs = options.args.split()
 
         db_user = await self.db.get_user(user.id)
-        db_user = {  # fuck tuples
-            'telegram_user_id': db_user[0],
-            'username': db_user[1],
-            'user_id': db_user[2],
-            'gamemode': db_user[3]
-        }
+        if db_user:
+            db_user = {  # fuck tuples
+                'telegram_user_id': db_user[0],
+                'username': db_user[1],
+                'user_id': db_user[2],
+                'gamemode': db_user[3]
+            }
 
         try:
-            outputs, option_gamemode = self._gamemode_option_parser(options)
-            option_parser = OptionParser()
-            option_parser.add_option('b', 'best', opt_type=None, default=False)
-            option_parser.add_option('m', 'gamemode', opt_type='str', default=None)
-            option_parser.add_option('ps', 'pass', opt_type=None, default=None)
-            option_parser.add_option('p', 'page', opt_type=int, default=None)
-            option_parser.add_option('i', 'index', opt_type='range', default=None)
-            option_parser.add_option('?', 'search', opt_type='str', default=None)
-            option_parser.add_option('np', 'now_playing', opt_type='str', default=False)
-            # option_parser.add_option('g', 'graph', opt_type=None, default=False)  maybe
-            option_parser.add_option('l', 'list', opt_type=None, default=False)
-            # option_parser.add_option('im', 'image', opt_type=None, default=False)  no
-            usernames, options = option_parser.parse(outputs)
+            username_options, option_gamemode = self._gamemode_option_parser(inputs)
+            usernames, options = self._option_parser(username_options)
         except TypeError:
             await message.answer('Please check your inputs for errors!')
             return
 
-        usernames = list(set(usernames))
-        if not usernames:
-            username = db_user['username']
-        else:
-            username = usernames[0]
+        final_username = None
 
-        gamemode = None
+        if not usernames:
+            if not db_user:
+                await message.answer('No players found.')
+                return
+            final_username = db_user['username']
+
+        if not final_username:
+            final_username = list(set(usernames))[0]
+
+        gamemode = 'osu'
         if option_gamemode:
             gamemode = option_gamemode
-        if options['gamemode']:
-            gamemode = int(option_gamemode)
-        if db_user:
-            gamemode = int(db_user['gamemode'])
-        if gamemode is None:
-            gamemode = 0
+        elif db_user:
+            gamemode = db_user['gamemode']
 
+        user_info = await self.osuAPI.get_user(final_username, gamemode)
+        if not user_info:
+            await message.answer('{} was not found'.format(final_username))
+            return
+
+        play_fin = None
         if options['best']:
             pass
 
-        elif options['now_playing']:
-            pass
+        else:
+            user_recent_list = await self.osuAPI.get_user_recent(user_id=user_info['id'], mode=gamemode)
+            if not user_recent_list:
+                await message.answer('{} has no recent plays for {}'.format(user_info['username'], gamemode))
+            play_fin = user_recent_list[0]
+            print(play_fin)
 
         if options['pass']:
             pass
@@ -131,18 +136,46 @@ class Osu:
         if options['list']:
             pass
 
+        await self.create_recent_answer(message, user_info, play_fin, gamemode)
+
+    async def create_recent_answer(self, message: Message, user_info, play_info, gamemode):
+        beatmap_statistics = play_info['statistics']
+        beatmap_info = play_info['beatmap']
+        beatmapset_info = play_info['beatmapset']
+
+        header = 'Recent {} play for {}:\n'.format(gamemode, user_info['username'])
+        title = '{}{}+{}[{}]\n'.format(
+            beatmapset_info['title'], beatmap_info['version'], ''.join(play_info['mods']), beatmap_info['difficulty_rating'])
+        text = '>{mark}({complietion_if_failed}) > {pp_count}PP > {accuracy}%\n'\
+               '> {score_count} > x{combo} / {max_combo} > [{300_count} / {100_count} / {50_count} / {miss_count}]'
+
+        title_fin = hlink(title, beatmap_info['url'])
+        return True
+
     def _gamemode_option_parser(self, inputs):
         option_parser = OptionParser()
-        option_parser.add_option('std', '0', opt_type=None, default=False)
-        option_parser.add_option('osu', '0', opt_type=None, default=False)
-        option_parser.add_option('taiko', '1', opt_type=None, default=False)
-        option_parser.add_option('ctb', '2', opt_type=None, default=False)
-        option_parser.add_option('mania', '3', opt_type=None, default=False)
-        outputs, options = option_parser.parse(inputs)
+        option_parser.add_option('std', 'osu', opt_type=None, default=False)
+        option_parser.add_option('osu', 'osu', opt_type=None, default=False)
+        option_parser.add_option('taiko', 'taiko', opt_type=None, default=False)
+        option_parser.add_option('ctb', 'fruits', opt_type=None, default=False)
+        option_parser.add_option('mania', 'mania', opt_type=None, default=False)
+        outputs, gamemodes = option_parser.parse(inputs)
 
-        gamemode = None
-        for option in options:
-            if options[option]:
-                gamemode = int(option)
+        final_gamemode = None
+        for gamemode in gamemodes:
+            if gamemodes[gamemode]:
+                final_gamemode = str(gamemode)
 
-        return outputs, gamemode
+        return outputs, final_gamemode
+
+    def _option_parser(self, inputs):
+        option_parser = OptionParser()
+        option_parser.add_option(opt='b', opt_value='best', opt_type=None, default=False)
+        option_parser.add_option(opt='ps', opt_value='pass', opt_type=None, default=None)
+        option_parser.add_option(opt='p', opt_value='page', opt_type=int, default=None)
+        option_parser.add_option(opt='i', opt_value='index', opt_type=int, default=None)
+        option_parser.add_option(opt='?', opt_value='search', opt_type=str, default=None)
+        option_parser.add_option(opt='l', opt_value='list', opt_type=None, default=False)
+        usernames, options = option_parser.parse(inputs)
+
+        return usernames, options

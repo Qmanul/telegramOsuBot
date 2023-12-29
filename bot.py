@@ -4,7 +4,7 @@ from aiogram import Bot, Dispatcher
 
 from config_reader import config
 from core.database.database import Database
-from core.handlers import user_link
+from core.handlers import user_link, user_scores
 
 
 async def main():
@@ -16,7 +16,7 @@ async def main():
     dp = Dispatcher()
     bot = Bot(token=config.bot_token.get_secret_value())
 
-    dp.include_routers(user_link.router)  # user_scores.router
+    dp.include_routers(user_link.router, user_scores.router)
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)

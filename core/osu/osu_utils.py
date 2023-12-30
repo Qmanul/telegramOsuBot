@@ -2,13 +2,13 @@ import pyttanko
 
 
 def beautify_mode_text(gamemode: str):
-    tdict = {
+    mode_names = {
         'osu': 'osu! Standard',
         'taiko': 'osu! Taiko',
         'fruits': 'Cath the Beat',
         'mania': 'osu! Mania'
     }
-    return tdict[gamemode]
+    return mode_names[gamemode]
 
 
 def mod_to_number(passed_mods: list):

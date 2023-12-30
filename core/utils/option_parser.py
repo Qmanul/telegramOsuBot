@@ -1,6 +1,3 @@
-import re
-
-
 class OptionParser(object):
     def __init__(self):
         self._opts = {}

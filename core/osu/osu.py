@@ -166,7 +166,8 @@ class Osu:
 
         await message.answer(answer, parse_mode=ParseMode.HTML)
 
-    def _gamemode_option_parser(self, inputs):
+    @staticmethod
+    def _gamemode_option_parser(inputs):
         option_parser = OptionParser()
         option_parser.add_option('std', 'osu', opt_type=None, default=False)
         option_parser.add_option('osu', 'osu', opt_type=None, default=False)
@@ -182,7 +183,8 @@ class Osu:
 
         return outputs, final_gamemode
 
-    def _option_parser(self, inputs):
+    @staticmethod
+    def _option_parser(inputs):
         option_parser = OptionParser()
         option_parser.add_option(opt='b', opt_value='best', opt_type=None, default=False)
         option_parser.add_option(opt='ps', opt_value='pass', opt_type=None, default=None)

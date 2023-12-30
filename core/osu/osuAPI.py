@@ -1,5 +1,4 @@
 import datetime
-import time
 import aiohttp
 
 from core.utils.uri_builder import URIBuilder

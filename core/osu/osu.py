@@ -1,6 +1,7 @@
 import asyncio
 
-import aiofiles
+import emoji
+import oppadc
 import pyttanko
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandObject
@@ -153,22 +154,43 @@ class Osu:
         answer += header
 
         mods = ''.join(play_info['mods']) if play_info['mods'] else 'NoMod'
-        title = '{}{}+{}[{}]\n'.format(
+        title = '{} [{}]+{} [{}{}]\n'.format(
             beatmap['beatmapset']['title'], beatmap['version'], mods,
-            beatmap['difficulty_rating'])
+            beatmap['difficulty_rating'], emoji.emojize(":star:"))
         title_fin = hlink(title, beatmap['url'])
         answer += title_fin
 
         filepath = await self.nerinyanAPI.download_osu_file(beatmap=beatmap)
-        bmap = pyttanko.parser().map(open(filepath))
+        bmap = oppadc.OsuMap(filepath)
 
-        play_pp = await osu_utils.calculate_pp(mods=mods, bmp=bmap, info={'play_info': play_info})  #play_info['pp'] if play_info['pp'] is not None else
+        text = ''
+        rank = '> {} '.format(play_info['rank'])
+        text += rank
 
-        text = '> {} > {:0.2f}PP > {:0.2f}%\n> {} > x{}/{} > [{}/{}/{}/{}]'.format(
-            play_info['rank'], play_pp, play_info['accuracy'] * 100, play_info['score'], play_info['max_combo'],
-            beatmap['max_combo'], play_statistics['count_300'], play_statistics['count_100'],
-            play_statistics['count_50'], play_statistics['count_miss']
-        )
+        play_pp = play_info['pp'] if play_info['pp'] is not None else await osu_utils.calculate_pp(mods=mods, bmp=bmap,
+                                                                                                   play_info=play_info,
+                                                                                                   fc=False)
+        pp_text = '> {:0.2f}PP '.format(play_pp)
+        if gamemode == 'osu' and (play_statistics['count_miss'] >= 1 or (
+                'S' in play_info['rank'] and play_info['max_combo'] <= beatmap['max_combo'] * 0.9)):
+            fc_pp = await osu_utils.calculate_pp(mods=mods, bmp=bmap, play_info=play_info, fc=True)
+            fc_acc = await osu_utils.fc_accuracy(play_statistics)
+            pp_text += '({:0.2f}PP for {:0.2f}%) '.format(fc_pp, fc_acc)
+        text += pp_text
+
+        acc_text = '> {:0.2f}%\n'.format(play_info['accuracy'] * 100)
+        text += acc_text
+
+        score_text = '> {} '.format(play_info['score'])
+        text += score_text
+
+        combo_text = '> x{}/{} '.format(play_info['max_combo'], beatmap['max_combo'])
+        text += combo_text
+
+        hitcount_text = '> [{}/{}/{}/{}]'.format(play_statistics['count_300'], play_statistics['count_100'],
+                                                 play_statistics['count_50'], play_statistics['count_miss'])
+        text += hitcount_text
+
         answer += text
 
         await message.answer(answer, parse_mode=ParseMode.HTML)

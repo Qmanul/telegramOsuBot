@@ -160,13 +160,11 @@ class Osu:
         answer += title_fin
 
         filepath = await self.nerinyanAPI.download_osu_file(beatmap=beatmap)
-        async with aiofiles.open(filepath) as f:
-            bmap = pyttanko.parser().map(await f.read())
+        bmap = pyttanko.parser().map(open(filepath))
 
-        play_pp = await osu_utils.calculate_pp(mods=mods, bmp=bmap, info={'play_info':play_info})   #  play_info['pp'] if play_info['pp'] is not None else
-        print(play_pp)
+        play_pp = await osu_utils.calculate_pp(mods=mods, bmp=bmap, info={'play_info': play_info})  #play_info['pp'] if play_info['pp'] is not None else
 
-        text = '> {} > {:0.2f}PP > {:0.2f}%\n> {} > x{}/{} > [{}/{}/{}/ {}]'.format(
+        text = '> {} > {:0.2f}PP > {:0.2f}%\n> {} > x{}/{} > [{}/{}/{}/{}]'.format(
             play_info['rank'], play_pp, play_info['accuracy'] * 100, play_info['score'], play_info['max_combo'],
             beatmap['max_combo'], play_statistics['count_300'], play_statistics['count_100'],
             play_statistics['count_50'], play_statistics['count_miss']

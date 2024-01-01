@@ -1,5 +1,8 @@
 import datetime
+import glob
 import os.path
+from pathlib import Path
+import shutil
 import zipfile
 
 import aiofiles
@@ -70,7 +73,7 @@ class officialAPIV2(object):
         self.token = None
         self.token_expire = None
 
-    # user
+    # пользователь
     async def get_user(self, user, mode):
         uri_base = 'users/{}/{}'.format(user, mode)
         uri_builder = URIBuilder(uri_base)
@@ -149,7 +152,7 @@ class officialAPIV2(object):
 
         return res
 
-    # beatmaps
+    # карты
     async def get_beatmap(self, bmap_id):
         uri_base = 'beatmaps/{beatmap}?'.format(beatmap=bmap_id)
 
@@ -168,7 +171,7 @@ class officialAPIV2(object):
 
         return res
 
-    # request
+    # запросы
     async def get_token(self):
         payload = {
             'client_id': self.client_id,
@@ -232,12 +235,23 @@ class NerinyanAPI:
         url = self.base.format(beatmapset_id)
         zip_filepath = os.path.join(self.extract_path, 'ext_beatmapset.zip'.format(beatmapset_id))
 
-        await self.download_file(url, zip_filepath)
+        # пересоздаём папку для распаковки
+        shutil.rmtree(self.extract_path, ignore_errors=True)
+        Path(self.extract_path).mkdir(parents=True, exist_ok=True)
 
-        with zipfile.ZipFile(zip_filepath, 'r') as r:
+        await self.download_file(url, zip_filepath)  # качаем мапсет как zip
+
+        with zipfile.ZipFile(zip_filepath, 'r') as r:  # распаковываем мапсет
             r.extractall(self.extract_path)
 
-        # filepath = os.path.join(os.getcwd(), 'core', 'osu', 'beatmaps', 'beatmapset_{}.zip'.format(beatmapset_id))
+        for osu_file in glob.glob(os.path.join(self.extract_path, '*.osu')):  # находим все .osu файлы и итерируем по ним
+            async with aiofiles.open(osu_file, 'r') as f:
+                async for line in f:
+                    if 'BeatmapID:' not in line:
+                        continue
+                    beatmap_id = str(line).split(':')[1].strip()  # находим ид карты
+                    shutil.copy2(osu_file, os.path.join(self.beatmap_path, '{}.osu'.format(beatmap_id)))  # переимеовываем файл и кидаем в папку с картами
+                    break
 
     async def download_file(self, url, path):
         async with aiohttp.ClientSession(headers=self.headers) as session:

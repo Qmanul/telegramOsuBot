@@ -15,6 +15,7 @@ class OsuApi(object):
     def __init__(self, official_client_id=None, official_client_secret=None):
         self.official_api_v2 = officialAPIV2(client_id=official_client_id, client_secret=official_client_secret)
         self.beatmap_download_url = 'https://api.nerinyan.moe/d/{}?noVideo=true&noBg=true&NoHitsound=true&NoStoryboard=true'
+        self.nerinyan_api = NerinyanAPI()
 
         self.api_dict = {
             'bancho': self.official_api_v2,
@@ -53,12 +54,6 @@ class OsuApi(object):
         api_obj = self.get_api(api)
         res = await api_obj.get_beatmap(bmap_id=bmap_id)
         return res
-
-    async def donwload_beatmap(self, beatmap):
-        beatmap_id = beatmap['id']
-
-    async def download_osz_file(self, beatmap_id):
-        url = self.beatmap_download_url.format(beatmap_id)
 
     def get_api(self, api_name):
         return self.api_dict[api_name]
@@ -230,6 +225,22 @@ class NerinyanAPI:
         self.headers = {'Content-Type': 'application/x-osu-beatmap-archive'}
         self.extract_path = os.path.join(os.getcwd(), 'core', 'osu', 'beatmaps', 'extract')
         self.beatmap_path = os.path.join(os.getcwd(), 'core', 'osu', 'beatmaps')
+
+    async def download_osu_file(self, beatmap):
+        beatmap_id = beatmap['id']
+        beatmapset_id = beatmap['beatmapset_id']
+        url = 'https://osu.ppy.sh/osu/{}'.format(beatmap_id)
+        filepath = os.path.join(self.beatmap_path, '{}.osu'.format(beatmap_id))
+
+        if os.path.exists(filepath):
+            return filepath
+
+        try:
+            await self.download_osz(beatmapset_id)
+        except:
+            await self.download_file(url, filepath)
+
+        return filepath
 
     async def download_osz(self, beatmapset_id):
         url = self.base.format(beatmapset_id)

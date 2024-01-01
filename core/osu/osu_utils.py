@@ -15,12 +15,25 @@ def mod_to_number(passed_mods: list):
     passed_mods = [x.upper() for x in passed_mods]
     mods = ['NF', 'EZ', 'TD', 'HD', 'FILLER', 'HR', 'DT', 'FILLER', 'HT', 'NC', 'FL', 'FILLER', 'SO']
     res = sum([1 << mods.index(mod) for mod in passed_mods if mod in mods])
-    return res
+    return int(res)
 
 
-def calculate_pp(bmp, mods=0):
-    if isinstance(mods, list):
+async def calculate_pp(bmp, mods, info=None):
+    if mods == 'NoMod':
+        mods = 0
+    else:
         mods = mod_to_number(mods)
+
     stars = pyttanko.diff_calc().calc(bmap=bmp, mods=mods)
-    pp, _, _, _, _ = pyttanko.ppv2()
-    return True
+
+    if info and 'play_info' in info.keys():
+        play_info = info['play_info']
+
+        for stat, count in play_info['statistics'].items():
+            play_info[stat] = count
+        play_info.pop('statistics')
+
+        pp, _, _, _, _ = pyttanko.ppv2(stars.aim, stars.speed, bmap=bmp, mods=mods,
+                                       n300=play_info['count_300'], n100=play_info['count_100'], n50=play_info['count_50'],
+                                       nmiss=play_info['count_miss'], combo=play_info['max_combo'])
+        return pp

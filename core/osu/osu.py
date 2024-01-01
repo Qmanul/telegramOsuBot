@@ -1,5 +1,7 @@
 import asyncio
 
+import aiofiles
+import pyttanko
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandObject
 from aiogram.types import Message
@@ -7,7 +9,7 @@ from aiogram.utils.markdown import hlink
 
 from core.utils.option_parser import OptionParser
 from core.database.database import UserDatabase
-from core.osu.osuAPI import OsuApi
+from core.osu.osuAPI import OsuApi, NerinyanAPI
 from config_reader import config
 from core.osu import osu_utils
 
@@ -18,6 +20,7 @@ class Osu:
             official_client_id=int(config.client_id.get_secret_value()),
             official_client_secret=config.client_secret.get_secret_value()
         )
+        self.nerinyanAPI = NerinyanAPI()
         self.user_db = UserDatabase()
         self.gamemodes = ['osu', 'taiko', 'fruits', 'mania']
 
@@ -121,6 +124,7 @@ class Osu:
             user_recent_list = await self.osuAPI.get_user_recent(user_id=user_info['id'], mode=gamemode)
             if not user_recent_list:
                 await message.answer('{} has no recent plays for {}'.format(user_info['username'], gamemode))
+                return
             play_fin = user_recent_list[0]
 
         if options['pass']:
@@ -155,7 +159,12 @@ class Osu:
         title_fin = hlink(title, beatmap['url'])
         answer += title_fin
 
-        play_pp = play_info['pp'] if play_info['pp'] is not None else 0
+        filepath = await self.nerinyanAPI.download_osu_file(beatmap=beatmap)
+        async with aiofiles.open(filepath) as f:
+            bmap = pyttanko.parser().map(await f.read())
+
+        play_pp = await osu_utils.calculate_pp(mods=mods, bmp=bmap, info={'play_info':play_info})   #  play_info['pp'] if play_info['pp'] is not None else
+        print(play_pp)
 
         text = '> {} > {:0.2f}PP > {:0.2f}%\n> {} > x{}/{} > [{}/{}/{}/ {}]'.format(
             play_info['rank'], play_pp, play_info['accuracy'] * 100, play_info['score'], play_info['max_combo'],

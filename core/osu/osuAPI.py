@@ -1,4 +1,8 @@
 import datetime
+import os.path
+import zipfile
+
+import aiofiles
 import aiohttp
 
 from core.utils.uri_builder import URIBuilder
@@ -7,9 +11,11 @@ from core.utils.uri_builder import URIBuilder
 class OsuApi(object):
     def __init__(self, official_client_id=None, official_client_secret=None):
         self.official_api_v2 = officialAPIV2(client_id=official_client_id, client_secret=official_client_secret)
+        self.beatmap_download_url = 'https://api.nerinyan.moe/d/{}?noVideo=true&noBg=true&NoHitsound=true&NoStoryboard=true'
 
         self.api_dict = {
-            'bancho': self.official_api_v2
+            'bancho': self.official_api_v2,
+            'nerinyan': self.nerinyan_api
         }
 
     async def get_user(self, user_id, mode=0, api='bancho'):
@@ -45,6 +51,12 @@ class OsuApi(object):
         res = await api_obj.get_beatmap(bmap_id=bmap_id)
         return res
 
+    async def donwload_beatmap(self, beatmap):
+        beatmap_id = beatmap['id']
+
+    async def download_osz_file(self, beatmap_id):
+        url = self.beatmap_download_url.format(beatmap_id)
+
     def get_api(self, api_name):
         return self.api_dict[api_name]
 
@@ -53,17 +65,13 @@ class officialAPIV2(object):
     def __init__(self, client_id, client_secret):
         self.name = "Bancho"
         self.base = "https://osu.ppy.sh/api/v2/{}"
-        self.download_beatmap = 'https://osu.ppy.sh/beatmapsets/{}/download?noVideo=1'
         self.client_id = client_id
         self.client_secret = client_secret
         self.token = None
         self.token_expire = None
-        self.mode_dict = {0: 'osu', 1: 'taiko', 2: 'fruits', 3: 'mania'}
-        self.max_per_page = 50
 
     # user
     async def get_user(self, user, mode):
-        # mode_text = self.mode_to_text(mode)
         uri_base = 'users/{}/{}'.format(user, mode)
         uri_builder = URIBuilder(uri_base)
         uri = self.base.format(uri_builder.get_uri())
@@ -72,8 +80,6 @@ class officialAPIV2(object):
 
     async def get_user_recent(self, user,
                               include_fails=True, mode=0, limit=50, offset=0):
-
-        # mode_text = self.mode_to_text(mode)
         uri_base = 'users/{}/scores/recent?'.format(user)
 
         uri_builder = URIBuilder(uri_base)
@@ -89,7 +95,6 @@ class officialAPIV2(object):
         return res
 
     async def get_user_best(self, user, mode=0, limit=100, offset=0):
-        # mode_text = self.mode_to_text(mode)
         uri_base = 'users/{}/scores/best?'.format(user)
 
         uri_builder = URIBuilder(uri_base)
@@ -104,7 +109,6 @@ class officialAPIV2(object):
         return res
 
     async def get_user_firsts(self, user_id, mode=0, limit=50, offset=0):
-        # mode_text = self.mode_to_text(mode)
         uri_base = 'users/{}/scores/firsts?'.format(user_id)
 
         uri_builder = URIBuilder(uri_base)
@@ -215,5 +219,30 @@ class officialAPIV2(object):
             async with session.post(uri, json=data) as res:
                 return await res.json()
 
-    def mode_to_text(self, mode):
-        return self.mode_dict[mode]
+
+class NerinyanAPI:
+    def __init__(self):
+        self.name = 'Nerinyan'
+        self.base = 'https://api.nerinyan.moe/d/{}?noVideo=true&noBg=true&NoHitsound=true&NoStoryboard=true'
+        self.headers = {'Content-Type': 'application/x-osu-beatmap-archive'}
+        self.extract_path = os.path.join(os.getcwd(), 'core', 'osu', 'beatmaps', 'extract')
+        self.beatmap_path = os.path.join(os.getcwd(), 'core', 'osu', 'beatmaps')
+
+    async def download_osz(self, beatmapset_id):
+        url = self.base.format(beatmapset_id)
+        zip_filepath = os.path.join(self.extract_path, 'ext_beatmapset.zip'.format(beatmapset_id))
+
+        await self.download_file(url, zip_filepath)
+
+        with zipfile.ZipFile(zip_filepath, 'r') as r:
+            r.extractall(self.extract_path)
+
+        # filepath = os.path.join(os.getcwd(), 'core', 'osu', 'beatmaps', 'beatmapset_{}.zip'.format(beatmapset_id))
+
+    async def download_file(self, url, path):
+        async with aiohttp.ClientSession(headers=self.headers) as session:
+            async with session.get(url) as res:
+                if res.status == 200:
+                    async with aiofiles.open(path, mode='wb') as f:
+                        await f.write(await res.read())
+

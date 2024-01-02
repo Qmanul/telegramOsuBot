@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import re
 
 import emoji
@@ -114,7 +115,7 @@ class Osu:
             gamemode = db_user['gamemode']
 
         user_info = await self.osuAPI.get_user(final_username, gamemode)
-        if not user_info:
+        if not user_info or 'error' in user_info:
             await message.answer('{} was not found'.format(final_username))
             return
 
@@ -122,14 +123,12 @@ class Osu:
 
         play_list = []
         if options['best']:
-            answer_type = 'Top {}'
             play_list = await self.osuAPI.get_user_best(user_id=user_info['id'], mode=gamemode)
             for index, play_info in enumerate(play_list):
                 play_info['index'] = index
             play_list.sort(key=lambda x: x['created_at'], reverse=True)
 
         else:
-            answer_type = 'Recent'
             play_list = await self.osuAPI.get_user_recent(user_id=user_info['id'], mode=gamemode,
                                                           include_fails=include_fails)
             if not play_list:
@@ -138,10 +137,10 @@ class Osu:
                 return
 
         if options['search']:
-            query = options['search'].lower()
+            queries = options['search'].replace('"', '').lower().split()
+            temp_play_list = []
             for play_info in play_list:
                 if not all(key in play_info for key in ['beatmap', 'beatmapset']):
-                    print(play_info)
                     play_list.remove(play_info)
                     continue
                 map_title = play_info['beatmapset']['title']
@@ -149,13 +148,14 @@ class Osu:
                 mapper = play_info['beatmapset']['creator']
                 diff = play_info['beatmap']['version']
                 title = '{} {} {} {}'.format(map_artist, map_title, mapper, diff).lower()
-                print(title)
-                if query not in title:
-                    play_list.remove(play_info)
-            if not play_list:
+                if any(query in title for query in queries):
+                    temp_play_list.append(play_info)
+
+            if not temp_play_list:
                 await message.answer('{} has no recent plays for {} with those options.'.format(
                     user_info['username'], osu_utils.beautify_mode_text(gamemode)))
                 return
+            play_list = temp_play_list
 
         if options['index']:
             index = options['index']
@@ -168,14 +168,18 @@ class Osu:
             play_fin = play_list[0]
 
         if options['best']:
-            answer_type = answer_type.format(str(play_fin['index'] + 1))
+            answer_type = 'Top {}'.format(str(play_fin['index'] + 1))
+            tries_count = None
+        else:
+            answer_type = 'Recent'
+            tries_count = await osu_utils.get_number_of_tries(play_list, play_fin['beatmap']['id'])
 
         if options['list']:
             pass
 
-        await self.create_recent_answer(message, user_info, play_fin, gamemode, answer_type)
+        await self.create_recent_answer(message, user_info, play_fin, gamemode, answer_type, tries_count)
 
-    async def create_recent_answer(self, message: Message, user_info, play_info, gamemode, answer_type):
+    async def create_recent_answer(self, message: Message, user_info, play_info, gamemode, answer_type, tries_count):
         answer = ''
         play_statistics = play_info['statistics']
         beatmap = await self.osuAPI.get_beatmap(play_info['beatmap']['id'])
@@ -194,6 +198,8 @@ class Osu:
 
         text = ''
         rank = '> {} '.format(play_info['rank'])
+        if 'F' in play_info['rank']:
+            rank += '({:0.2f}%) '.format(await osu_utils.get_map_completion(play_info, filepath))
         text += rank
 
         play_pp = play_info['pp'] if play_info['pp'] is not None else await osu_utils.calculate_pp(mods=mods, filepath=filepath,
@@ -203,7 +209,7 @@ class Osu:
                                   ('S' in play_info['rank'] and play_info['max_combo'] <= beatmap['max_combo'] * 0.9)):
             fc_pp = await osu_utils.calculate_pp_fc(mods=mods, filepath=filepath, play_info=play_info)
             fc_acc = await osu_utils.fc_accuracy(play_statistics)
-            pp_text += '({:0.2f}PP for {:0.2f}%) '.format(fc_pp, fc_acc)
+            pp_text += '({:0.2f}PP for {:0.2f}% FC) '.format(fc_pp, fc_acc)
         text += pp_text
 
         acc_text = '> {:0.2f}%\n'.format(play_info['accuracy'] * 100)
@@ -218,8 +224,18 @@ class Osu:
         hitcount_text = '> [{}/{}/{}/{}]'.format(play_statistics['count_300'], play_statistics['count_100'],
                                                  play_statistics['count_50'], play_statistics['count_miss'])
         text += hitcount_text
-
+        text += '\n'
         answer += text
+
+        footer = ''
+        footer_tries = '> Try #{} '.format(tries_count) if tries_count else ''
+        footer += footer_tries
+
+        date = datetime.datetime.fromisoformat(play_info['created_at'][:-1])
+        footer_date = '> {}'.format(date.strftime('%d.%m.%Y %H:%M'))
+        footer += footer_date
+
+        answer += footer
 
         await message.answer(answer, parse_mode=ParseMode.HTML)
 

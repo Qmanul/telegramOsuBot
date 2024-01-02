@@ -117,25 +117,40 @@ class Osu:
             await message.answer('{} was not found'.format(final_username))
             return
 
-        play_fin = None
+        include_fails = 0 if options['pass'] else 1
+
+        play_list = None
         if options['best']:
-            pass
+            answer_type = 'Top {}'
+            play_list = await self.osuAPI.get_user_best(user_id=user_info['id'], mode=gamemode)
+            for index, play in enumerate(play_list):
+                play['index'] = index
+            play_list.sort(key=lambda x: x['created_at'], reverse=True)
 
         else:
-            user_recent_list = await self.osuAPI.get_user_recent(user_id=user_info['id'], mode=gamemode)
-            if not user_recent_list:
-                await message.answer('{} has no recent plays for {}'.format(user_info['username'], gamemode))
+            answer_type = 'Recent'
+            play_list = await self.osuAPI.get_user_recent(user_id=user_info['id'], mode=gamemode,
+                                                          include_fails=include_fails)
+            if not play_list:
+                await message.answer('{} has no recent plays for {}'.format(user_info['username'],
+                                                                            osu_utils.beautify_mode_text(gamemode)))
                 return
-            play_fin = user_recent_list[0]
-
-        if options['pass']:
-            pass
 
         if options['page']:
             pass
 
         if options['index']:
-            pass
+            index = options['index']
+            if index > len(play_list) or index < 1:
+                await message.answer('{} has no recent plays for {} with those options.'.format(
+                    user_info['username'], osu_utils.beautify_mode_text(gamemode)))
+                return
+            play_fin = play_list[index-1]
+        else:
+            play_fin = play_list[0]
+
+        if options['best']:
+            answer_type = answer_type.format(str(play_fin['index'] + 1))
 
         if options['search']:
             pass
@@ -143,14 +158,14 @@ class Osu:
         if options['list']:
             pass
 
-        await self.create_recent_answer(message, user_info, play_fin, gamemode)
+        await self.create_recent_answer(message, user_info, play_fin, gamemode, answer_type)
 
-    async def create_recent_answer(self, message: Message, user_info, play_info, gamemode):
+    async def create_recent_answer(self, message: Message, user_info, play_info, gamemode, answer_type):
         answer = ''
         play_statistics = play_info['statistics']
         beatmap = await self.osuAPI.get_beatmap(play_info['beatmap']['id'])
 
-        header = 'Recent {} play for {}:\n'.format(osu_utils.beautify_mode_text(gamemode), user_info['username'])
+        header = '{} {} play for {}:\n'.format(answer_type, osu_utils.beautify_mode_text(gamemode), user_info['username'])
         answer += header
 
         mods = ''.join(play_info['mods']) if play_info['mods'] else 'NoMod'
@@ -161,19 +176,17 @@ class Osu:
         answer += title_fin
 
         filepath = await self.nerinyanAPI.download_osu_file(beatmap=beatmap)
-        bmap = oppadc.OsuMap(filepath)
 
         text = ''
         rank = '> {} '.format(play_info['rank'])
         text += rank
 
-        play_pp = play_info['pp'] if play_info['pp'] is not None else await osu_utils.calculate_pp(mods=mods, bmp=bmap,
-                                                                                                   play_info=play_info,
-                                                                                                   fc=False)
+        play_pp = play_info['pp'] if play_info['pp'] is not None else await osu_utils.calculate_pp(mods=mods, filepath=filepath,
+                                                                                                   play_info=play_info)
         pp_text = '> {:0.2f}PP '.format(play_pp)
-        if gamemode == 'osu' and (play_statistics['count_miss'] >= 1 or (
-                'S' in play_info['rank'] and play_info['max_combo'] <= beatmap['max_combo'] * 0.9)):
-            fc_pp = await osu_utils.calculate_pp(mods=mods, bmp=bmap, play_info=play_info, fc=True)
+        if gamemode == 'osu' and (play_statistics['count_miss'] >= 1 or
+                                  ('S' in play_info['rank'] and play_info['max_combo'] <= beatmap['max_combo'] * 0.9)):
+            fc_pp = await osu_utils.calculate_pp_fc(mods=mods, filepath=filepath, play_info=play_info)
             fc_acc = await osu_utils.fc_accuracy(play_statistics)
             pp_text += '({:0.2f}PP for {:0.2f}%) '.format(fc_pp, fc_acc)
         text += pp_text
@@ -205,7 +218,7 @@ class Osu:
         option_parser.add_option('mania', 'mania', opt_type=None, default=False)
         outputs, gamemodes = option_parser.parse(inputs)
 
-        final_gamemode = None
+        final_gamemode = 'osu'
         for gamemode in gamemodes:
             if gamemodes[gamemode]:
                 final_gamemode = str(gamemode)

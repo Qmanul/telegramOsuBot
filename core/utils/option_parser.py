@@ -8,12 +8,12 @@ class OptionParser(object):
     def parse(self, inputs: list):
         options = {value['opt_value']: value['default'] for key, value in self._opts.items()}
 
-        for i, option in enumerate(inputs):
+        for i, option in reversed(list(enumerate(inputs))):
             if option not in self._opts:
                 continue
 
             if self._opts[option]['opt_type']:
-                value = inputs[i+1]
+                value = int(inputs[i+1]) if inputs[i+1].isdigit() else inputs[i+1]
                 if not isinstance(value, self._opts[option]['opt_type']) or value in self._opts:
                     return False
                 del inputs[i:i+2]

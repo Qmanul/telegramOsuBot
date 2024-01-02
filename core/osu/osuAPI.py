@@ -28,9 +28,9 @@ class OsuApi(object):
         return res
 
     async def get_user_recent(self, user_id, mode=0,
-                              limit=50, api='bancho'):
+                              limit=50, api='bancho', include_fails=1):
         api_obj = self.get_api(api)
-        res = await api_obj.get_user_recent(user=user_id, mode=mode, limit=limit)
+        res = await api_obj.get_user_recent(user=user_id, mode=mode, limit=limit, include_fails=include_fails)
         return res
 
     async def get_user_best(self, user_id, mode=0,
@@ -77,7 +77,7 @@ class officialAPIV2(object):
         return res
 
     async def get_user_recent(self, user,
-                              include_fails=True, mode=0, limit=50, offset=0):
+                              include_fails=1, mode=0, limit=50, offset=0):
         uri_base = 'users/{}/scores/recent?'.format(user)
 
         uri_builder = URIBuilder(uri_base)

@@ -9,6 +9,6 @@ router = Router()
 osu = Osu()
 
 
-@router.message(Command("recent", prefix=">"))
+@router.message(Command("recent", "rs", prefix=">"))
 async def cmd_recent(message: types.Message, command: CommandObject):
     await osu.process_user_recent(message, command)

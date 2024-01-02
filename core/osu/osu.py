@@ -1,4 +1,5 @@
 import asyncio
+import re
 
 import emoji
 import oppadc
@@ -77,7 +78,7 @@ class Osu:
         user = message.from_user
         inputs = []
         if options.args:
-            inputs = options.args.split()
+            inputs = re.findall(r'\".+?\"|\S+', options.args)
 
         db_user = await self.user_db.get_user(user.id)
         if db_user:
@@ -90,7 +91,7 @@ class Osu:
 
         try:
             username_options, option_gamemode = self._gamemode_option_parser(inputs)
-            usernames, options = self._option_parser(username_options)
+            usernames, options = self._option_parser_recent(username_options)
         except TypeError:
             await message.answer('Please check your inputs for errors!')
             return
@@ -119,12 +120,12 @@ class Osu:
 
         include_fails = 0 if options['pass'] else 1
 
-        play_list = None
+        play_list = []
         if options['best']:
             answer_type = 'Top {}'
             play_list = await self.osuAPI.get_user_best(user_id=user_info['id'], mode=gamemode)
-            for index, play in enumerate(play_list):
-                play['index'] = index
+            for index, play_info in enumerate(play_list):
+                play_info['index'] = index
             play_list.sort(key=lambda x: x['created_at'], reverse=True)
 
         else:
@@ -136,8 +137,25 @@ class Osu:
                                                                             osu_utils.beautify_mode_text(gamemode)))
                 return
 
-        if options['page']:
-            pass
+        if options['search']:
+            query = options['search'].lower()
+            for play_info in play_list:
+                if not all(key in play_info for key in ['beatmap', 'beatmapset']):
+                    print(play_info)
+                    play_list.remove(play_info)
+                    continue
+                map_title = play_info['beatmapset']['title']
+                map_artist = play_info['beatmapset']['artist']
+                mapper = play_info['beatmapset']['creator']
+                diff = play_info['beatmap']['version']
+                title = '{} {} {} {}'.format(map_artist, map_title, mapper, diff).lower()
+                print(title)
+                if query not in title:
+                    play_list.remove(play_info)
+            if not play_list:
+                await message.answer('{} has no recent plays for {} with those options.'.format(
+                    user_info['username'], osu_utils.beautify_mode_text(gamemode)))
+                return
 
         if options['index']:
             index = options['index']
@@ -151,9 +169,6 @@ class Osu:
 
         if options['best']:
             answer_type = answer_type.format(str(play_fin['index'] + 1))
-
-        if options['search']:
-            pass
 
         if options['list']:
             pass
@@ -226,11 +241,10 @@ class Osu:
         return outputs, final_gamemode
 
     @staticmethod
-    def _option_parser(inputs):
+    def _option_parser_recent(inputs):
         option_parser = OptionParser()
         option_parser.add_option(opt='b', opt_value='best', opt_type=None, default=False)
         option_parser.add_option(opt='ps', opt_value='pass', opt_type=None, default=None)
-        option_parser.add_option(opt='p', opt_value='page', opt_type=int, default=None)
         option_parser.add_option(opt='i', opt_value='index', opt_type=int, default=None)
         option_parser.add_option(opt='?', opt_value='search', opt_type=str, default=None)
         option_parser.add_option(opt='l', opt_value='list', opt_type=None, default=False)

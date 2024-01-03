@@ -194,7 +194,7 @@ class Osu:
         title_fin = hlink(title, beatmap['url'])
         answer += title_fin
 
-        filepath = await self.nerinyanAPI.download_osu_file(beatmap=beatmap)
+        filepath = await self.osuAPI.download_beatmap(beatmap_info=beatmap, api='nerinyan')
 
         text = ''
         rank = '> {} '.format(play_info['rank'])

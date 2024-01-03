@@ -23,40 +23,42 @@ class OsuApi(object):
         }
 
     async def get_user(self, user_id, mode=0, api='bancho'):
-        api_obj = self.get_api(api)
+        api_obj = self.api_dict[api]
         res = await api_obj.get_user(user_id, mode=mode)
         return res
 
     async def get_user_recent(self, user_id, mode=0,
                               limit=50, api='bancho', include_fails=1):
-        api_obj = self.get_api(api)
+        api_obj = self.api_dict[api]
         res = await api_obj.get_user_recent(user=user_id, mode=mode, limit=limit, include_fails=include_fails)
         return res
 
     async def get_user_best(self, user_id, mode=0,
                             limit=100, api='bancho'):
-        api_obj = self.get_api(api)
+        api_obj = self.api_dict[api]
         res = await api_obj.get_user_best(user=user_id, mode=mode, limit=limit)
         return res
 
     async def get_user_firsts(self, user_id, mode=0,
                               limit=100, api='bancho'):
-        api_obj = self.get_api(api)
+        api_obj = self.api_dict[api]
         res = await api_obj.get_user_firsts(user=user_id, mode=mode, limit=limit)
         return res
 
     async def get_user_recent_activity(self, user_id, limit=50, api='bancho'):
-        api_obj = self.get_api(api)
+        api_obj = self.api_dict[api]
         res = await api_obj.get_user_recent_activity(user_id=user_id, limit=limit)
         return res
 
     async def get_beatmap(self, bmap_id, api='bancho'):
-        api_obj = self.get_api(api)
+        api_obj = self.api_dict[api]
         res = await api_obj.get_beatmap(bmap_id=bmap_id)
         return res
 
-    def get_api(self, api_name):
-        return self.api_dict[api_name]
+    async def download_beatmap(self, beatmap_info, api='nerinyan'):
+        api_obj = self.api_dict[api]
+        filepath = await api_obj.download_osu_file(beatmap=beatmap_info)
+        return filepath
 
 
 class officialAPIV2(object):

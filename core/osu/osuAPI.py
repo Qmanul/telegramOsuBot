@@ -22,24 +22,24 @@ class OsuApi(object):
             'nerinyan': self.nerinyan_api
         }
 
-    async def get_user(self, user_id, mode=0, api='bancho'):
+    async def get_user(self, user_id, mode='osu', api='bancho'):
         api_obj = self.api_dict[api]
         res = await api_obj.get_user(user_id, mode=mode)
         return res
 
-    async def get_user_recent(self, user_id, mode=0,
+    async def get_user_recent(self, user_id, mode='osu',
                               limit=50, api='bancho', include_fails=1):
         api_obj = self.api_dict[api]
         res = await api_obj.get_user_recent(user=user_id, mode=mode, limit=limit, include_fails=include_fails)
         return res
 
-    async def get_user_best(self, user_id, mode=0,
+    async def get_user_best(self, user_id, mode='osu',
                             limit=100, api='bancho'):
         api_obj = self.api_dict[api]
         res = await api_obj.get_user_best(user=user_id, mode=mode, limit=limit)
         return res
 
-    async def get_user_firsts(self, user_id, mode=0,
+    async def get_user_firsts(self, user_id, mode='osu',
                               limit=100, api='bancho'):
         api_obj = self.api_dict[api]
         res = await api_obj.get_user_firsts(user=user_id, mode=mode, limit=limit)
@@ -48,6 +48,11 @@ class OsuApi(object):
     async def get_user_recent_activity(self, user_id, limit=50, api='bancho'):
         api_obj = self.api_dict[api]
         res = await api_obj.get_user_recent_activity(user_id=user_id, limit=limit)
+        return res
+
+    async def get_user_beatmaps(self, user_id, bmp_type, limit=50, offset=0, api='bancho'):
+        api_obj = self.api_dict[api]
+        res = await api_obj.get_user_beatmaps(user_id=user_id, bmp_type=bmp_type, limit=limit, offset=offset)
         return res
 
     async def get_beatmap(self, bmap_id, api='bancho'):
@@ -79,7 +84,7 @@ class officialAPIV2(object):
         return res
 
     async def get_user_recent(self, user,
-                              include_fails=1, mode=0, limit=50, offset=0):
+                              include_fails=1, mode='osu', limit=50, offset=0):
         uri_base = 'users/{}/scores/recent?'.format(user)
 
         uri_builder = URIBuilder(uri_base)
@@ -94,7 +99,7 @@ class officialAPIV2(object):
 
         return res
 
-    async def get_user_best(self, user, mode=0, limit=100, offset=0):
+    async def get_user_best(self, user, mode='osu', limit=100, offset=0):
         uri_base = 'users/{}/scores/best?'.format(user)
 
         uri_builder = URIBuilder(uri_base)
@@ -108,7 +113,7 @@ class officialAPIV2(object):
 
         return res
 
-    async def get_user_firsts(self, user_id, mode=0, limit=50, offset=0):
+    async def get_user_firsts(self, user_id, mode='osu', limit=50, offset=0):
         uri_base = 'users/{}/scores/firsts?'.format(user_id)
 
         uri_builder = URIBuilder(uri_base)
@@ -136,8 +141,8 @@ class officialAPIV2(object):
         return res
 
     async def get_user_beatmaps(self, user_id, limit=50,
-                                offset=0, bmap_type='ranked'):
-        uri_base = 'users/{user}/beatmapsets/{type}?'.format(user=user_id, type=bmap_type)
+                                offset=0, bmp_type='ranked'):
+        uri_base = 'users/{user}/beatmapsets/{type}?'.format(user=user_id, type=bmp_type)
 
         uri_builder = URIBuilder(uri_base)
         uri_builder.add_parameter('limit', limit)

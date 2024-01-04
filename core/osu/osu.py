@@ -97,16 +97,16 @@ class Osu:
             await message.answer('Please check your inputs for errors!')
             return
 
-        final_username = None
+        username_fin = None
 
         if not usernames:
             if not db_user:
                 await message.answer('No players found.')
                 return
-            final_username = db_user['username']
+            username_fin = db_user['username']
 
-        if not final_username:
-            final_username = list(set(usernames))[0]
+        if not username_fin:
+            username_fin = list(set(usernames))[0]
 
         gamemode = 'osu'
         if option_gamemode:
@@ -114,14 +114,13 @@ class Osu:
         elif db_user:
             gamemode = db_user['gamemode']
 
-        user_info = await self.osuAPI.get_user(final_username, gamemode)
+        user_info = await self.osuAPI.get_user(username_fin, gamemode)
         if not user_info or 'error' in user_info:
-            await message.answer('{} was not found'.format(final_username))
+            await message.answer('{} was not found'.format(username_fin))
             return
 
         include_fails = 0 if options['pass'] else 1
 
-        play_list = []
         if options['best']:
             play_list = await self.osuAPI.get_user_best(user_id=user_info['id'], mode=gamemode)
             for index, play_info in enumerate(play_list):
@@ -163,7 +162,7 @@ class Osu:
                 await message.answer('{} has no recent plays for {} with those options.'.format(
                     user_info['username'], osu_utils.beautify_mode_text(gamemode)))
                 return
-            play_fin = play_list[index-1]
+            play_fin = play_list[index - 1]
         else:
             play_fin = play_list[0]
 
@@ -176,15 +175,67 @@ class Osu:
 
         if options['list']:
             pass
+            # self.recent_answer_list()
 
-        await self.create_recent_answer(message, user_info, play_fin, gamemode, answer_type, tries_count)
+        await self.recent_answer(message, user_info, play_fin, gamemode, answer_type, tries_count)
 
-    async def create_recent_answer(self, message: Message, user_info, play_info, gamemode, answer_type, tries_count):
+    async def process_user_info(self, message: Message, options: CommandObject, gamemode='osu'):
+        user = message.from_user
+        inputs = []
+        if options.args:
+            inputs = re.findall(r'\".+?\"|\S+', options.args)
+
+        db_user = await self.user_db.get_user(user.id)
+        if db_user:
+            db_user = {  # fuck tuples
+                'telegram_user_id': db_user[0],
+                'username': db_user[1],
+                'user_id': db_user[2],
+                'gamemode': db_user[3]
+            }
+            gamemode = db_user['gamemode']
+
+        try:
+            usernames, options = self._option_parser_user_info(inputs)
+        except TypeError:
+            await message.answer('Please check your inputs for errors!')
+            return
+
+        username_fin = None
+
+        if not usernames:
+            if not db_user:
+                await message.answer('No players found.')
+                return
+            username_fin = db_user['username']
+
+        if not username_fin:
+            username_fin = list(set(usernames))[0]
+
+        user_info = await self.osuAPI.get_user(username_fin, gamemode)
+
+        if options['recent']:
+            return
+
+        if options['beatmaps']:
+            bmp_type = options['beatmaps']
+            return
+
+        if options['mostplayed']:
+            return
+
+        if options['detailed']:
+            return
+
+        return
+
+    async def recent_answer(self, message: Message, user_info, play_info, gamemode, answer_type, tries_count):
         answer = ''
         play_statistics = play_info['statistics']
         beatmap = await self.osuAPI.get_beatmap(play_info['beatmap']['id'])
 
-        header = '{} {} play for {}:\n'.format(answer_type, osu_utils.beautify_mode_text(gamemode), user_info['username'])
+        header = '{} {} play for {}:\n'.format(answer_type, osu_utils.beautify_mode_text(gamemode),
+                                               user_info['username'])
         answer += header
 
         mods = ''.join(play_info['mods']) if play_info['mods'] else 'NoMod'
@@ -202,7 +253,8 @@ class Osu:
             rank += '({:0.2f}%) '.format(await osu_utils.get_map_completion(play_info, filepath))
         text += rank
 
-        play_pp = play_info['pp'] if play_info['pp'] is not None else await osu_utils.calculate_pp(mods=mods, filepath=filepath,
+        play_pp = play_info['pp'] if play_info['pp'] is not None else await osu_utils.calculate_pp(mods=mods,
+                                                                                                   filepath=filepath,
                                                                                                    play_info=play_info)
         pp_text = '> {:0.2f}PP '.format(play_pp)
         if gamemode == 'osu' and (play_statistics['count_miss'] >= 1 or
@@ -239,6 +291,14 @@ class Osu:
 
         await message.answer(answer, parse_mode=ParseMode.HTML)
 
+    async def user_info_answer(self, user, gamemode):
+        answer = ''
+        header = '{} Profile for {}'.format(osu_utils.beautify_mode_text(gamemode), user['username'])
+
+    async def test(self, message: Message, options: CommandObject):
+        username = options.args
+        user = await self.osuAPI.get_user(username)
+
     @staticmethod
     def _gamemode_option_parser(inputs):
         option_parser = OptionParser()
@@ -260,10 +320,21 @@ class Osu:
     def _option_parser_recent(inputs):
         option_parser = OptionParser()
         option_parser.add_option(opt='b', opt_value='best', opt_type=None, default=False)
-        option_parser.add_option(opt='ps', opt_value='pass', opt_type=None, default=None)
+        option_parser.add_option(opt='ps', opt_value='pass', opt_type=None, default=False)
         option_parser.add_option(opt='i', opt_value='index', opt_type=int, default=None)
         option_parser.add_option(opt='?', opt_value='search', opt_type=str, default=None)
         option_parser.add_option(opt='l', opt_value='list', opt_type=None, default=False)
+        usernames, options = option_parser.parse(inputs)
+
+        return usernames, options
+
+    @staticmethod
+    def _option_parser_user_info(inputs):
+        option_parser = OptionParser()
+        option_parser.add_option(opt='r', opt_value='recent', opt_type=None, default=False)
+        option_parser.add_option(opt='b', opt_value='beatmaps', opt_type=str, default=None)
+        option_parser.add_option(opt='mp', opt_value='mostplayed', opt_type=None, default=False)
+        option_parser.add_option(opt='d', opt_value='detailed', opt_type=None, default=False)
         usernames, options = option_parser.parse(inputs)
 
         return usernames, options

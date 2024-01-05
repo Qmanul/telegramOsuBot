@@ -1,5 +1,9 @@
 import copy
+from datetime import datetime
+
+import emoji
 import oppadc
+from aiogram.utils.markdown import hlink
 
 
 def beautify_mode_text(gamemode: str):
@@ -69,3 +73,48 @@ async def get_map_completion(play_info, filepath):
     completion = (point / timing) * 100
 
     return completion
+
+
+async def create_play_info(play_info, beatmap, filepath, gamemode):
+    play_statistics = play_info['statistics']
+    mods = ''.join(play_info['mods']) if play_info['mods'] else 'NoMod'
+
+    title = '{} [{}]+{} [{}{}]\n'.format(
+        beatmap['beatmapset']['title'], beatmap['version'], mods,
+        beatmap['difficulty_rating'], emoji.emojize(":star:"))
+    title_fin = hlink(title, beatmap['url'])
+
+    text = ''
+    rank = '> {} '.format(play_info['rank'])
+    if 'F' in play_info['rank']:
+        rank += '({:0.2f}%) '.format(await get_map_completion(play_info, filepath))
+    text += rank
+
+    play_pp = play_info['pp'] if play_info['pp'] is not None else await calculate_pp(mods=mods,
+                                                                                     filepath=filepath,
+                                                                                     play_info=play_info)
+    pp_text = '> {:0.2f}PP '.format(play_pp)
+    if gamemode == 'osu' and (play_statistics['count_miss'] >= 1 or
+                              ('S' in play_info['rank'] and play_info['max_combo'] <= beatmap['max_combo'] * 0.9)):
+        fc_pp = await calculate_pp_fc(mods=mods, filepath=filepath, play_info=play_info)
+        fc_acc = await fc_accuracy(play_statistics)
+        pp_text += '({:0.2f}PP for {:0.2f}% FC) '.format(fc_pp, fc_acc)
+    text += pp_text
+
+    acc_text = '> {:0.2f}%\n'.format(play_info['accuracy'] * 100)
+    text += acc_text
+
+    score_text = '> {} '.format(play_info['score'])
+    text += score_text
+
+    combo_text = '> x{}/{} '.format(play_info['max_combo'], beatmap['max_combo'])
+    text += combo_text
+
+    hitcount_text = '> [{}/{}/{}/{}]\n'.format(play_statistics['count_300'], play_statistics['count_100'],
+                                               play_statistics['count_50'], play_statistics['count_miss'])
+    text += hitcount_text
+
+    date = datetime.fromisoformat(play_info['created_at'][:-1])
+    score_date = '{}'.format(date.strftime('%d.%m.%Y %H:%M'))
+
+    return title_fin, text, score_date

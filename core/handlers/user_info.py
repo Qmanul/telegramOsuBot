@@ -12,3 +12,8 @@ osu = Osu()
 @router.message(Command("link", prefix=">"))
 async def cmd_set_user(message: types.Message, command: CommandObject):
     await osu.set_user(message, command)
+
+
+@router.message(Command("osu", "std", prefix=">"))
+async def cmd_set_user(message: types.Message, command: CommandObject):
+    await osu.process_user_info(message, command, gamemode='osu')

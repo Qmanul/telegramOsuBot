@@ -1,6 +1,7 @@
 import datetime
 import glob
 import os.path
+from io import BytesIO
 from pathlib import Path
 import shutil
 import zipfile
@@ -14,7 +15,6 @@ from core.utils.uri_builder import URIBuilder
 class OsuApi(object):
     def __init__(self, official_client_id=None, official_client_secret=None):
         self.official_api_v2 = officialAPIV2(client_id=official_client_id, client_secret=official_client_secret)
-        self.beatmap_download_url = 'https://api.nerinyan.moe/d/{}?noVideo=true&noBg=true&NoHitsound=true&NoStoryboard=true'
         self.nerinyan_api = NerinyanAPI()
 
         self.api_dict = {
@@ -55,6 +55,11 @@ class OsuApi(object):
         res = await api_obj.get_user_beatmaps(user_id=user_id, bmp_type=bmp_type, limit=limit, offset=offset)
         return res
 
+    async def get_user_url(self, user_id, api='bancho'):
+        api_obj = self.api_dict[api]
+        user_url = api_obj.user_url.format(user_id)
+        return user_url
+
     async def get_beatmap(self, bmap_id, api='bancho'):
         api_obj = self.api_dict[api]
         res = await api_obj.get_beatmap(bmap_id=bmap_id)
@@ -70,6 +75,7 @@ class officialAPIV2(object):
     def __init__(self, client_id, client_secret):
         self.name = "Bancho"
         self.base = "https://osu.ppy.sh/api/v2/{}"
+        self.user_url = "https://osu.ppy.sh/users/{}"
         self.client_id = client_id
         self.client_secret = client_secret
         self.token = None
@@ -245,21 +251,21 @@ class NerinyanAPI:
         try:
             await self.download_osz(beatmapset_id)
         except:
-            await self.download_file(url, filepath)
+            osu_file = await self.download_file(url)
+            async with aiofiles.open(filepath, mode='wb') as f:
+                await f.write(osu_file)
 
         return filepath
 
     async def download_osz(self, beatmapset_id):
         url = self.base.format(beatmapset_id)
-        zip_filepath = os.path.join(self.extract_path, 'ext_beatmapset.zip'.format(beatmapset_id))
 
-        # пересоздаём папку для распаковки
         shutil.rmtree(self.extract_path, ignore_errors=True)
         Path(self.extract_path).mkdir(parents=True, exist_ok=True)
 
-        await self.download_file(url, zip_filepath)  # качаем мапсет как zip
+        beatmap = await self.download_file(url)  # качаем мапсет как zip
 
-        with zipfile.ZipFile(zip_filepath, 'r') as r:  # распаковываем мапсет
+        with zipfile.ZipFile(BytesIO(beatmap)) as r:  # распаковываем мапсет
             r.extractall(self.extract_path)
 
         for osu_file in glob.glob(os.path.join(self.extract_path, '*.osu')):  # находим все .osu файлы и итерируем по ним
@@ -271,10 +277,9 @@ class NerinyanAPI:
                     shutil.copy2(osu_file, os.path.join(self.beatmap_path, '{}.osu'.format(beatmap_id)))  # переимеовываем файл и кидаем в папку с картами
                     break
 
-    async def download_file(self, url, path):
+    async def download_file(self, url):
         async with aiohttp.ClientSession(headers=self.headers) as session:
             async with session.get(url) as res:
-                if res.status == 200:
-                    async with aiofiles.open(path, mode='wb') as f:
-                        await f.write(await res.read())
+                if res.ok:
+                    return await res.read()
 

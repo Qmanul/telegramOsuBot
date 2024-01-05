@@ -28,15 +28,13 @@ class Osu:
         self.user_db = UserDatabase()
         self.gamemodes = ['osu', 'taiko', 'fruits', 'mania']
 
-    async def set_user(self, message: Message, command: CommandObject):
+    async def process_set_user(self, message: Message, command: CommandObject):
+        user = message.from_user
+
         if command.args is None:
             await message.answer('No username')
             return
         username = command.args
-        await self.process_set_user(username=username, message=message)
-
-    async def process_set_user(self, username, message: Message):
-        user = message.from_user
 
         if username == 'NONE':
             user_update = {

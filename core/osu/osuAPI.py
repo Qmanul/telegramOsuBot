@@ -83,7 +83,7 @@ class officialAPIV2(object):
 
     # пользователь
     async def get_user(self, user, mode):
-        uri_base = 'users/{}/{}'.format(user, mode)
+        uri_base = f'users/{user}/{mode}'
         uri_builder = URIBuilder(uri_base)
         uri = self.base.format(uri_builder.get_uri())
         res = await self.fetch(uri)
@@ -91,7 +91,7 @@ class officialAPIV2(object):
 
     async def get_user_recent(self, user,
                               include_fails=1, mode='osu', limit=50, offset=0):
-        uri_base = 'users/{}/scores/recent?'.format(user)
+        uri_base = f'users/{user}/scores/recent?'
 
         uri_builder = URIBuilder(uri_base)
         uri_builder.add_parameter('include_fails', include_fails)
@@ -106,7 +106,7 @@ class officialAPIV2(object):
         return res
 
     async def get_user_best(self, user, mode='osu', limit=100, offset=0):
-        uri_base = 'users/{}/scores/best?'.format(user)
+        uri_base = f'users/{user}/scores/best?'
 
         uri_builder = URIBuilder(uri_base)
         uri_builder.add_parameter('mode', mode)
@@ -120,7 +120,7 @@ class officialAPIV2(object):
         return res
 
     async def get_user_firsts(self, user_id, mode='osu', limit=50, offset=0):
-        uri_base = 'users/{}/scores/firsts?'.format(user_id)
+        uri_base = f'users/{user_id}/scores/firsts?'
 
         uri_builder = URIBuilder(uri_base)
         uri_builder.add_parameter('mode', mode)
@@ -134,8 +134,7 @@ class officialAPIV2(object):
         return res
 
     async def get_user_recent_activity(self, user_id, limit=50, offset=0):
-        uri_base = 'users/{}/recent_activity?'.format(user_id)
-
+        uri_base = f'users/{user_id}/recent_activity?'
         uri_builder = URIBuilder(uri_base)
         uri_builder.add_parameter('limit', limit)
         uri_builder.add_parameter('offset', offset)
@@ -148,7 +147,7 @@ class officialAPIV2(object):
 
     async def get_user_beatmaps(self, user_id, limit=50,
                                 offset=0, bmp_type='ranked'):
-        uri_base = 'users/{user}/beatmapsets/{type}?'.format(user=user_id, type=bmp_type)
+        uri_base = f'users/{user_id}/beatmapsets/{bmp_type}?'
 
         uri_builder = URIBuilder(uri_base)
         uri_builder.add_parameter('limit', limit)
@@ -162,7 +161,7 @@ class officialAPIV2(object):
 
     # карты
     async def get_beatmap(self, bmap_id):
-        uri_base = 'beatmaps/{beatmap}?'.format(beatmap=bmap_id)
+        uri_base = f'beatmaps/{bmap_id}?'
 
         url = self.base.format(uri_base)
 
@@ -171,7 +170,7 @@ class officialAPIV2(object):
         return res
 
     async def get_beatmapset(self, bmapset_id):
-        uri_base = 'beatmapsets/{beatmapset}?'.format(beatmapset=bmapset_id)
+        uri_base = f'beatmapsets/{bmapset_id}?'
 
         url = self.base.format(uri_base)
 
@@ -200,7 +199,7 @@ class officialAPIV2(object):
             await self.get_token()
 
         payload = {
-            'Authorization': 'Bearer {}'.format(self.token),
+            'Authorization': f'Bearer {self.token}',
             'Accept': 'application/json',
             'Content-Type': 'application/json',
         }
@@ -218,7 +217,7 @@ class officialAPIV2(object):
             payload = {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer {}'.format(self.token)
+                'Authorization': f'Bearer {self.token}'
             }
         else:
             payload = {
@@ -242,8 +241,8 @@ class NerinyanAPI:
     async def download_osu_file(self, beatmap):
         beatmap_id = beatmap['id']
         beatmapset_id = beatmap['beatmapset_id']
-        url = 'https://osu.ppy.sh/osu/{}'.format(beatmap_id)
-        filepath = os.path.join(self.beatmap_path, '{}.osu'.format(beatmap_id))
+        url = f'https://osu.ppy.sh/osu/{beatmap_id}'
+        filepath = os.path.join(self.beatmap_path, f'{beatmap_id}.osu')
 
         if os.path.exists(filepath):
             return filepath
@@ -274,7 +273,7 @@ class NerinyanAPI:
                     if 'BeatmapID:' not in line:
                         continue
                     beatmap_id = str(line).split(':')[1].strip()  # находим ид карты
-                    shutil.copy2(osu_file, os.path.join(self.beatmap_path, '{}.osu'.format(beatmap_id)))  # переимеовываем файл и кидаем в папку с картами
+                    shutil.copy2(osu_file, os.path.join(self.beatmap_path, f'{beatmap_id}.osu')) # переимеовываем файл и кидаем в папку с картами
                     break
 
     async def download_file(self, url):

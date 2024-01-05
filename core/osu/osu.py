@@ -27,6 +27,22 @@ class Osu:
         self.nerinyanAPI = NerinyanAPI()
         self.user_db = UserDatabase()
         self.gamemodes = ['osu', 'taiko', 'fruits', 'mania']
+        '''
+        self.recent_event_types_dict = {
+            'achievement': self.process_user_info_recent_achievement(),
+            'rank': ,
+            'rankLost': ,
+            'beatmapsetApprove': ,
+            'beatmapsetUpdate': ,
+            'beatmapsetDelete': ,
+            'beatmapsetUpload': ,
+            'beatmapsetRevive': ,
+            'userSupportFirst': ,
+            'userSupportGift': ,
+            'userSupportAgain': ,
+            'usernameChange': 
+        }
+        '''
 
     async def process_set_user(self, message: Message, command: CommandObject):
         user = message.from_user
@@ -42,8 +58,7 @@ class Osu:
                 'user_id': None
             }
             await self.user_db.update_user(user.id, user_update)
-            await message.answer('{}, your username has been removed.'.format(
-                user.first_name))
+            await message.answer(f'{user.first_name}, your username has been removed.')
             return
 
         osu_user = None
@@ -55,23 +70,19 @@ class Osu:
             await asyncio.sleep(.5)
 
         if not osu_user:
-            await message.answer("{} doesn't exists".format(username))
+            await message.answer(f"{username} doesn't exists")
             return
 
         if not await self.user_db.check_user_exists(user.id):
             await self.user_db.create_new_user(user, osu_user)
-            await message.answer('{}, your account has been linked to `{}`.'.format(
-                user.first_name, osu_user['username']
-            ))
+            await message.answer(f'{user.first_name}, your account has been linked to `{osu_user["username"]}`.')
         else:
             user_update = {
                 'user_id': osu_user['id'],
                 'username': osu_user['username']
             }
             await self.user_db.update_user(user.id, user_update)
-            await message.answer('{}, your username has been edited to `{}`'.format(
-                user.first_name, osu_user['username']
-            ))
+            await message.answer(f'{user.first_name}, your username has been edited to `{osu_user["username"]}`.')
 
     # get user's recent score
     async def process_user_recent(self, message: Message, options: CommandObject):
@@ -115,63 +126,64 @@ class Osu:
 
         user_info = await self.osuAPI.get_user(username_fin, gamemode)
         if not user_info or 'error' in user_info:
-            await message.answer('{} was not found'.format(username_fin))
+            await message.answer(f'{username_fin} was not found')
             return
 
         include_fails = 0 if options['pass'] else 1
 
         if options['best']:
             play_list = await self.osuAPI.get_user_best(user_id=user_info['id'], mode=gamemode)
-            play_dict = dict(sorted({i: play for i, play in enumerate(play_list)}.items(),
-                                    key=lambda x: x[1]['created_at'], reverse=True))
+            await osu_utils.add_index_key(play_list)
+            play_list.sort(key=lambda x: x['created_at'], reverse=True)
 
         else:
             play_list = await self.osuAPI.get_user_recent(user_id=user_info['id'], mode=gamemode,
                                                           include_fails=include_fails)
             if not play_list:
-                await message.answer('{} has no recent plays for {}'.format(user_info['username'],
-                                                                            osu_utils.beautify_mode_text(gamemode)))
+                await message.answer(
+                    f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)}')
                 return
 
-            play_dict = {i: play for i, play in enumerate(play_list)}
+            await osu_utils.add_index_key(play_list)
 
         if options['search']:
             queries = options['search'].replace('"', '').lower().split()
-            temp_play_dict = {}
-            for index, play_info in play_dict.items():
+            temp_play_list = []
+            for play_info in play_list:
                 if not all(key in play_info for key in ['beatmap', 'beatmapset']):
-                    play_dict.pop(index)
+                    play_list.remove(play_info)
                     continue
                 map_title = play_info['beatmapset']['title']
                 map_artist = play_info['beatmapset']['artist']
                 mapper = play_info['beatmapset']['creator']
                 diff = play_info['beatmap']['version']
-                title = '{} {} {} {}'.format(map_artist, map_title, mapper, diff).lower()
+                title = f'{map_artist} {map_title} {mapper} {diff}'.lower()
                 if any(query in title for query in queries):
-                    temp_play_dict[index] = play_info
+                    temp_play_list.append(play_info)
 
-            if not temp_play_dict:
-                await message.answer('{} has no recent plays for {} with those options.'.format(
-                    user_info['username'], osu_utils.beautify_mode_text(gamemode)))
+            if not temp_play_list:
+                await message.answer(
+                    f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)} with those options.')
                 return
-            play_dict = temp_play_dict
-        if options['index']:
-            index = options['index'] - 1
-            if index > len(play_dict) or index <= 0:
-                await message.answer('{} has no recent plays for {} with those options.'.format(
-                    user_info['username'], osu_utils.beautify_mode_text(gamemode)))
-                return
-            play_fin = play_dict[index]
-        else:
-            play_fin = play_dict[0]
+            play_list = temp_play_list
 
         if options['list']:
             page = int(options['page']) - 1 if options['page'] else 0
-            await self.recent_answer_list(message, user_info, play_dict, gamemode, page)
+            await self.recent_answer_list(message, user_info, play_list, gamemode, page)
             return
 
+        if options['index']:
+            index = options['index'] - 1
+            if index > len(play_list) or index <= 0:
+                await message.answer(
+                    f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)} with those options.')
+                return
+            play_fin = play_list[index]
+        else:
+            play_fin = play_list[0]
+
         if options['best']:
-            answer_type = 'Top {}'.format(str(play_fin['index'] + 1))
+            answer_type = f'Top {str(play_fin["index"] + 1)}'
             tries_count = None
         else:
             answer_type = 'Recent'
@@ -183,15 +195,15 @@ class Osu:
         answer = ''
         beatmap = await self.osuAPI.get_beatmap(play_info['beatmap']['id'])
         filepath = await self.osuAPI.download_beatmap(beatmap_info=beatmap, api='nerinyan')
-
-        header = '{} {} {} Play for {}:\n'.format(flag(user_info['country_code']), answer_type,
-                                                  osu_utils.beautify_mode_text(gamemode), user_info['username'])
+        header = f"{flag(user_info['country_code'])} {answer_type} {osu_utils.beautify_mode_text(gamemode)} Play for {user_info['username']}:\n"
 
         title, text, score_date = await osu_utils.create_play_info(play_info, beatmap, filepath, gamemode)
 
         footer = ''
-        footer_tries = '> Try #{} > '.format(tries_count) if tries_count else ''
+        footer_tries = f' Try #{tries_count} • ' if tries_count else ''
         footer += footer_tries
+        footer_server = 'On osu! Bancho Server • '
+        footer += footer_server
         footer += score_date
 
         answer += header
@@ -201,29 +213,29 @@ class Osu:
 
         await message.answer(answer, parse_mode=ParseMode.HTML)
 
-    async def recent_answer_list(self, message: Message, user_info, play_dict, gamemode, page):
-        answer = ''
-        header = '{} Recent {} Plays for {}:\n'.format(flag(user_info['country_code']),
-                                                       osu_utils.beautify_mode_text(gamemode), user_info['username'])
-        answer += header
-        page = 5 * page
-        max_page = ceil(len(play_dict)/5)
-        if page > max_page:
-            await message.answer('{} has no recent plays for {} with those options.'.format(
-                user_info['username'], osu_utils.beautify_mode_text(gamemode)))
-            return
+    async def recent_answer_list(self, message: Message, user_info, play_list: list, gamemode, page):
 
-        for index, play_info in islice(play_dict.items(), page, page + min(len(play_dict) - page, 5)):
+        answer = ''
+        header = f'{flag(user_info["country_code"])} Recent {osu_utils.beautify_mode_text(gamemode)} Plays for {user_info["username"]}:\n'
+        answer += header
+        max_page = ceil(len(play_list) / 5)
+        if page > max_page:
+            await message.answer(
+                f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)} with those options.')
+            return
+        page = 5 * page
+
+        for play_info in islice(play_list, page, page + min(len(play_list) - page, 5)):
             beatmap = await self.osuAPI.get_beatmap(play_info['beatmap']['id'])
             filepath = await self.osuAPI.download_beatmap(beatmap_info=beatmap, api='nerinyan')
             title, text, score_date = await osu_utils.create_play_info(play_info, beatmap, filepath, gamemode)
 
-            answer += '{}) '.format(index + 1)
+            answer += f'{play_info["index"] + 1}) '
             answer += title
             answer += text
-            answer += '> Score Set On {}\n'.format(score_date)
+            answer += f'▸ Score Set On {score_date}\n'
 
-        footer = 'On osu! Bancho Server | Page {} of {}'.format(page + 1, max_page)
+        footer = f'On osu! Bancho Server | Page {page // 5 + 1} of {max_page}'
         answer += footer
         await message.answer(answer, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
         return
@@ -284,40 +296,33 @@ class Osu:
         await self.user_info_answer(message, user_info, gamemode)
         return
 
-
     async def user_info_answer(self, message: Message, user, gamemode):
         answer = ''
-        header_temp = '{} {} Profile for {}\n'.format(flag(user['country_code']),
-                                                      osu_utils.beautify_mode_text(gamemode),
-                                                      user['username'])
+        header_temp = f'{flag(user["country_code"])} {osu_utils.beautify_mode_text(gamemode)} Profile for {user["username"]}\n'
         header = hlink(header_temp, await self.osuAPI.get_user_url(user['id']))
 
         text = ''
-        rank = '#{}'.format(user['statistics']['global_rank']) if user['statistics']['global_rank'] else '-'
-        country_rank = '#{}'.format(user['statistics']['country_rank']) if user['statistics']['country_rank'] else ''
-        text_rank = '> <b>Bancho Rank:</b> {} ({}{})\n'.format(rank, user['country_code'], country_rank)
+        rank = f'#{user["statistics"]["global_rank"]}' if user['statistics']['global_rank'] else '-'
+        country_rank = f"#{user['statistics']['country_rank']}" if user['statistics']['country_rank'] else ''
+        text_rank = f"▸ <b>Bancho Rank:</b> {rank} ({user['country_code']}{country_rank})\n"
         text += text_rank
 
         peak_rank_date = datetime.datetime.fromisoformat(user['rank_highest']['updated_at'][:-1]).strftime(
             '%d.%m.%Y %H:%M')
-        text_peak_rank = '> <b>Peak Rank:</b> #{} achived on {}\n'.format(user['rank_highest']['rank'], peak_rank_date)
+        text_peak_rank = f"▸ <b>Peak Rank:</b> #{user['rank_highest']['rank']} achived on {peak_rank_date}\n"
         text += text_peak_rank
 
-        text_level = '> <b>Level:</b> {} + {}%\n'.format(user['statistics']['level']['current'],
-                                                         user['statistics']['level']['progress'])
+        text_level = f"▸ <b>Level:</b> {user['statistics']['level']['current']} + {user['statistics']['level']['progress']}%\n"
         text += text_level
 
-        text_pp_accuracy = '> <b>PP:</b> {:0.2f} <b>Acc:</b> {:0.2f}%\n'.format(user['statistics']['pp'],
-                                                                                user['statistics']['hit_accuracy'])
+        text_pp_accuracy = f"▸ <b>PP:</b> {user['statistics']['pp']:0.2f} <b>Acc:</b> {user['statistics']['hit_accuracy']:0.2f}%\n"
         text += text_pp_accuracy
 
-        text_playcount = '> <b>Playcount:</b> {} ({} hrs)\n'.format(user['statistics']['play_count'],
-                                                                    round(user['statistics']['play_time'] / 3600))
+        text_playcount = f"▸ <b>Playcount:</b> {user['statistics']['play_count']} ({round(user['statistics']['play_time'] / 3600)} hrs)\n"
         text += text_playcount
 
         grades = user['statistics']['grade_counts']
-        text_grades = '> <b>Ranks:</b> SSH:{} SS:{} SH:{} S:{} A:{}\n'.format(grades['ssh'], grades['ss'], grades['sh'],
-                                                                              grades['s'], grades['a'])
+        text_grades = f"▸ <b>Ranks:</b> SSH:{grades['ssh']} SS:{grades['ss']} SH:{grades['sh']} S:{grades['s']} A:{grades['a']}\n"
         text += text_grades
 
         footer = ''
@@ -326,7 +331,7 @@ class Osu:
         if user['last_visit']:
             date = datetime.datetime.fromisoformat(user['last_visit'])
             delta = datetime.datetime.now(tz=datetime.timezone.utc) - date
-            footer += ' Last Seen {} Hours Ago'.format(round(delta.seconds / 3600))
+            footer += f' Last Seen {round(delta.seconds / 3600)} Hours Ago'
         footer += ' On osu! Bancho Server'
 
         answer += header
@@ -334,9 +339,13 @@ class Osu:
         answer += footer
         await message.answer(answer, parse_mode=ParseMode.HTML)
 
+    async def user_info_recent_answer(self, message: Message, user, gamemode, recent_list):
+        return
+
     async def test(self, message: Message, options: CommandObject):
         username = options.args
         user = await self.osuAPI.get_user(username)
+        print(await self.osuAPI.get_user_recent_activity(user_id=user['id']))
 
     @staticmethod
     def _gamemode_option_parser(inputs):

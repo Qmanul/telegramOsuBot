@@ -16,28 +16,42 @@ def beautify_mode_text(gamemode: str):
     return mode_names[gamemode]
 
 
-async def calculate_pp(filepath, mods, play_info: dict):
+async def get_full_play_info(filepath, play_info: dict):
     bmp = oppadc.OsuMap(file_path=filepath)
     info = await fix_keys(play_info)
+    res = {}
+
+    mods = ''.join(play_info['mods']) if play_info['mods'] else 'NoMod'
     pp = bmp.getPP(Mods=mods, combo=info['max_combo'], n300=info['count_300'],
-                   n100=info['count_100'], n50=info['count_50'], misses=info['count_miss'])
-    return pp.total_pp
+                   n100=info['count_100'], n50=info['count_50'], misses=info['count_miss'], recalculate=True)
+    res['pp'] = pp.total_pp
 
+    res['star_rating'] = round(bmp.getStats(mods, recalculate=True).total, 2)
 
-async def calculate_pp_fc(filepath, mods, play_info: dict):
-    bmp = oppadc.OsuMap(file_path=filepath)
-    info = await fix_keys(play_info)
-    pp = bmp.getPP(Mods=mods, combo=bmp.maxCombo(), n300=info['count_300'] + info['count_miss'],
-                   n100=info['count_100'], n50=info['count_50'], misses=0)
-    return pp.total_pp
+    if 'F' in play_info['rank']:
+        completion_hits = int(info['count_50']) + int(info['count_100']) + int(info['count_300']) + int(
+            info['count_miss'])
 
+        numobj = completion_hits - 1
+        timing = int(bmp.hitobjects[-1].starttime) - int(bmp.hitobjects[0].starttime)
+        point = int(bmp.hitobjects[numobj].starttime) - int(bmp.hitobjects[0].starttime)
+        completion = (point / timing) * 100
 
-async def fc_accuracy(play_statistics: dict):
-    fc_acc = ((300 * (play_statistics['count_300'] + play_statistics['count_miss']) + 100 *
-               play_statistics['count_100'] + 50 * play_statistics['count_50']) / (300 * (
-            play_statistics['count_300'] + play_statistics['count_miss'] + play_statistics['count_100'] +
-            play_statistics['count_50'] + 0)))
-    return fc_acc * 100
+        res['completion'] = completion
+
+    if info['mode'] == 'osu' and (
+            info['count_miss'] >= 1 or ('S' in play_info['rank'] and play_info['max_combo'] <= bmp.maxCombo() * 0.9) or
+            play_info['max_combo'] < bmp.maxCombo() // 2):
+
+        fc_pp = bmp.getPP(Mods=mods, combo=bmp.maxCombo(), n300=info['count_300'] + info['count_miss'],
+                          n100=info['count_100'], n50=info['count_50'], misses=0, recalculate=True)
+        res['fc_pp'] = fc_pp.total_pp
+
+        fc_acc = ((300 * (info['count_300'] + info['count_miss']) + 100 * info['count_100'] + 50 * info['count_50']) / (
+                300 * (info['count_300'] + info['count_miss'] + info['count_100'] + info['count_50'] + 0)))
+        res['fc_acc'] = fc_acc * 100
+
+    return res
 
 
 async def fix_keys(play_info: dict):
@@ -62,59 +76,45 @@ async def get_number_of_tries(play_list, beatmap_id):
     return tries_count
 
 
-async def get_map_completion(play_info, filepath):
-    bmp = oppadc.OsuMap(file_path=filepath)
-    info = await fix_keys(play_info)
-    completion_hits = int(info['count_50']) + int(info['count_100']) + int(info['count_300']) + int(info['count_miss'])
-
-    numobj = completion_hits - 1
-    timing = int(bmp.hitobjects[-1].starttime) - int(bmp.hitobjects[0].starttime)
-    point = int(bmp.hitobjects[numobj].starttime) - int(bmp.hitobjects[0].starttime)
-    completion = (point / timing) * 100
-
-    return completion
-
-
 async def create_play_info(play_info, beatmap, filepath, gamemode):
     play_statistics = play_info['statistics']
     mods = ''.join(play_info['mods']) if play_info['mods'] else 'NoMod'
+    map_info = await get_full_play_info(filepath, play_info)
 
-    title = '{} [{}]+{} [{}{}]\n'.format(
-        beatmap['beatmapset']['title'], beatmap['version'], mods,
-        beatmap['difficulty_rating'], emoji.emojize(":star:"))
+    title = f"{beatmap['beatmapset']['title']} [{beatmap['version']}]+{mods} [{map_info['star_rating']}{emoji.emojize(':star:')}]\n"
     title_fin = hlink(title, beatmap['url'])
 
     text = ''
-    rank = '> {} '.format(play_info['rank'])
-    if 'F' in play_info['rank']:
-        rank += '({:0.2f}%) '.format(await get_map_completion(play_info, filepath))
+    rank = f"▸ {play_info['rank']} "
+    if 'completion' in map_info:
+        rank += f'({map_info["completion"]:0.2f}%) '
     text += rank
 
-    play_pp = play_info['pp'] if play_info['pp'] is not None else await calculate_pp(mods=mods,
-                                                                                     filepath=filepath,
-                                                                                     play_info=play_info)
-    pp_text = '> {:0.2f}PP '.format(play_pp)
-    if gamemode == 'osu' and (play_statistics['count_miss'] >= 1 or
-                              ('S' in play_info['rank'] and play_info['max_combo'] <= beatmap['max_combo'] * 0.9)):
-        fc_pp = await calculate_pp_fc(mods=mods, filepath=filepath, play_info=play_info)
-        fc_acc = await fc_accuracy(play_statistics)
-        pp_text += '({:0.2f}PP for {:0.2f}% FC) '.format(fc_pp, fc_acc)
+    play_pp = play_info['pp'] if play_info['pp'] is not None else map_info['pp']
+    pp_text = f'▸ {play_pp:0.2f}PP '
+    if 'fc_pp' in map_info:
+        fc_pp, fc_acc = map_info['fc_pp'], map_info['fc_acc']
+        pp_text += f'({fc_pp:0.2f}PP for {fc_acc:0.2f}% FC) '
     text += pp_text
 
-    acc_text = '> {:0.2f}%\n'.format(play_info['accuracy'] * 100)
+    acc_text = f"▸ {play_info['accuracy'] * 100:0.2f}%\n"
     text += acc_text
 
-    score_text = '> {} '.format(play_info['score'])
+    score_text = f"▸ {play_info['score']} "
     text += score_text
 
-    combo_text = '> x{}/{} '.format(play_info['max_combo'], beatmap['max_combo'])
+    combo_text = f"▸ x{play_info['max_combo']}/{beatmap['max_combo']} "
     text += combo_text
 
-    hitcount_text = '> [{}/{}/{}/{}]\n'.format(play_statistics['count_300'], play_statistics['count_100'],
-                                               play_statistics['count_50'], play_statistics['count_miss'])
+    hitcount_text = f"▸ [{play_statistics['count_300']}/{play_statistics['count_100']}/{play_statistics['count_50']}/{play_statistics['count_miss']}]\n"
     text += hitcount_text
 
     date = datetime.fromisoformat(play_info['created_at'][:-1])
-    score_date = '{}'.format(date.strftime('%d.%m.%Y %H:%M'))
+    score_date = f'{date.strftime("%H:%M %d.%m.%Y")}'
 
     return title_fin, text, score_date
+
+
+async def add_index_key(play_list):
+    for index, play_info in enumerate(play_list):
+        play_info['index'] = index

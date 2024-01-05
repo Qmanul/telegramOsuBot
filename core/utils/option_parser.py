@@ -3,7 +3,7 @@ class OptionParser(object):
         self._opts = {}
 
     def add_option(self, opt, opt_value, opt_type, default):
-        self._opts['-{}'.format(opt)] = {'opt_value': opt_value, 'opt_type': opt_type, 'default': default}
+        self._opts[f'-{opt}'] = {'opt_value': opt_value, 'opt_type': opt_type, 'default': default}
 
     def parse(self, inputs: list):
         options = {value['opt_value']: value['default'] for key, value in self._opts.items()}

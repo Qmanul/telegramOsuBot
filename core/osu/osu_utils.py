@@ -76,7 +76,7 @@ async def get_number_of_tries(play_list, beatmap_id):
     return tries_count
 
 
-async def create_play_info(play_info, beatmap, filepath, gamemode):
+async def create_play_info(play_info, beatmap, filepath):
     play_statistics = play_info['statistics']
     mods = ''.join(play_info['mods']) if play_info['mods'] else 'NoMod'
     map_info = await get_full_play_info(filepath, play_info)
@@ -113,6 +113,37 @@ async def create_play_info(play_info, beatmap, filepath, gamemode):
     score_date = f'{date.strftime("%H:%M %d.%m.%Y")}'
 
     return title_fin, text, score_date
+
+
+async def process_user_info_recent_achievement(recent_info: dict, date):
+    return f'▸ Unlocked the {recent_info["achievement"]["name"]} medal on {date}\n'
+
+
+async def process_user_info_recent_rank(recent_info: dict, date):
+    map_link = f'<a href="https://osu.ppy.sh{recent_info["beatmap"]["url"]}">{recent_info["beatmap"]["title"]}</a>'
+    if 'scoreRank' in recent_info.keys():
+        return f'▸ {recent_info["scoreRank"]} Achieved #{recent_info["rank"]} on {map_link} on {date}\n'
+    return f'▸ Lost first on {map_link} on {date}\n'
+
+
+async def process_user_info_recent_beatmapset(recent_info: dict, date):
+    map_link = f'<a href="https://osu.ppy.sh{recent_info["beatmapset"]["url"]}">{recent_info["beatmapset"]["title"]}</a>'
+    recent_type = str(recent_info["type"].replace("beatmapset", ""))
+    recent_type += 'ed' if recent_info["type"][-1] == 'd' else 'd'
+    return f'▸ {recent_type} beatmapset {map_link} on {date}\n'
+
+
+async def process_user_info_recent_userSupport(recent_info: dict, date):
+    if 'first' in recent_info["type"].lower():
+        return f'Has bought osu!supporter for the first time on {date}\n'
+    elif 'gift' in recent_info["type"].lower():
+        return f'Has received the gift of osu!supporter on {date}\n'
+    else:
+        return f'Has bought osu!supporter again on {date}\n'
+
+
+async def process_user_info_recent_usernameChange(recent_info: dict, date):
+    return
 
 
 async def add_index_key(play_list):

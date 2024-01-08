@@ -27,22 +27,20 @@ class Osu:
         self.nerinyanAPI = NerinyanAPI()
         self.user_db = UserDatabase()
         self.gamemodes = ['osu', 'taiko', 'fruits', 'mania']
-        '''
         self.recent_event_types_dict = {
-            'achievement': self.process_user_info_recent_achievement(),
-            'rank': ,
-            'rankLost': ,
-            'beatmapsetApprove': ,
-            'beatmapsetUpdate': ,
-            'beatmapsetDelete': ,
-            'beatmapsetUpload': ,
-            'beatmapsetRevive': ,
-            'userSupportFirst': ,
-            'userSupportGift': ,
-            'userSupportAgain': ,
-            'usernameChange': 
+            'achievement': osu_utils.process_user_info_recent_achievement,
+            'rank': osu_utils.process_user_info_recent_rank,
+            'rankLost': osu_utils.process_user_info_recent_rank,
+            'beatmapsetApprove': osu_utils.process_user_info_recent_beatmapset,
+            'beatmapsetUpdate': osu_utils.process_user_info_recent_beatmapset,
+            'beatmapsetDelete': osu_utils.process_user_info_recent_beatmapset,
+            'beatmapsetUpload': osu_utils.process_user_info_recent_beatmapset,
+            'beatmapsetRevive': osu_utils.process_user_info_recent_beatmapset,
+            'userSupportFirst': osu_utils.process_user_info_recent_userSupport,
+            'userSupportGift': osu_utils.process_user_info_recent_userSupport,
+            'userSupportAgain': osu_utils.process_user_info_recent_userSupport,
+            'usernameChange': osu_utils.process_user_info_recent_usernameChange
         }
-        '''
 
     async def process_set_user(self, message: Message, command: CommandObject):
         user = message.from_user
@@ -197,7 +195,7 @@ class Osu:
         filepath = await self.osuAPI.download_beatmap(beatmap_info=beatmap, api='nerinyan')
         header = f"{flag(user_info['country_code'])} {answer_type} {osu_utils.beautify_mode_text(gamemode)} Play for {user_info['username']}:\n"
 
-        title, text, score_date = await osu_utils.create_play_info(play_info, beatmap, filepath, gamemode)
+        title, text, score_date = await osu_utils.create_play_info(play_info, beatmap, filepath)
 
         footer = ''
         footer_tries = f' Try #{tries_count} • ' if tries_count else ''
@@ -228,7 +226,7 @@ class Osu:
         for play_info in islice(play_list, page, page + min(len(play_list) - page, 5)):
             beatmap = await self.osuAPI.get_beatmap(play_info['beatmap']['id'])
             filepath = await self.osuAPI.download_beatmap(beatmap_info=beatmap, api='nerinyan')
-            title, text, score_date = await osu_utils.create_play_info(play_info, beatmap, filepath, gamemode)
+            title, text, score_date = await osu_utils.create_play_info(play_info, beatmap, filepath)
 
             answer += f'{play_info["index"] + 1}) '
             answer += title
@@ -271,7 +269,7 @@ class Osu:
             username_fin = db_user['username']
 
         if not username_fin:
-            username_fin = list(set(usernames))[0]
+            username_fin = list(set(usernames))[0].replace('"', '')
 
         if option_gamemode:
             gamemode = option_gamemode
@@ -279,8 +277,13 @@ class Osu:
             gamemode = db_user['gamemode']
 
         user_info = await self.osuAPI.get_user(username_fin, gamemode)
+        if not user_info or 'error' in user_info:
+            await message.answer(f'{username_fin} was not found')
+            return
 
         if options['recent']:
+            recent_list = await self.osuAPI.get_user_recent_activity(user_info['id'])
+            await self.user_info_recent_answer(message, user_info, gamemode, recent_list)
             return
 
         if options['beatmaps']:
@@ -340,7 +343,32 @@ class Osu:
         await message.answer(answer, parse_mode=ParseMode.HTML)
 
     async def user_info_recent_answer(self, message: Message, user, gamemode, recent_list):
-        return
+        answer = ''
+
+        rank = f'#{user["statistics"]["global_rank"]}' if user['statistics']['global_rank'] else '-'
+        country_rank = f"#{user['statistics']['country_rank']}" if user['statistics']['country_rank'] else ''
+        header_temp = (f'{flag(user["country_code"])} Recent {osu_utils.beautify_mode_text(gamemode)} Activity for '
+                       f'{user["username"]} [{rank} | {user["country_code"]}{country_rank}]\n')
+        header = hlink(header_temp, await self.osuAPI.get_user_url(user['id']))
+
+        text = ''
+        for recent_info in recent_list[:10]:
+            date = datetime.datetime.fromisoformat(recent_info['created_at'][:-6]).strftime('%H:%M %d.%m.%Y')
+            text += await self.recent_event_types_dict[recent_info['type']](recent_info, date)
+
+        footer = ''
+        footer += emoji.emojize(':green_circle:') if user['is_online'] else emoji.emojize(':red_circle:')
+
+        if user['last_visit']:
+            date = datetime.datetime.fromisoformat(user['last_visit'])
+            delta = datetime.datetime.now(tz=datetime.timezone.utc) - date
+            footer += f' Last Seen {round(delta.seconds / 3600)} Hours Ago'
+        footer += ' On osu! Bancho Server'
+
+        answer += header
+        answer += text
+        answer += footer
+        await message.answer(answer, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
 
     async def test(self, message: Message, options: CommandObject):
         username = options.args

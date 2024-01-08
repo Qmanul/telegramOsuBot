@@ -76,6 +76,7 @@ class officialAPIV2(object):
         self.name = "Bancho"
         self.base = "https://osu.ppy.sh/api/v2/{}"
         self.user_url = "https://osu.ppy.sh/users/{}"
+        self.token_url = "https://osu.ppy.sh/oauth/token"
         self.client_id = client_id
         self.client_secret = client_secret
         self.token = None
@@ -186,9 +187,8 @@ class officialAPIV2(object):
             'grant_type': 'client_credentials',
             'scope': 'public'
         }
-        uri = "https://osu.ppy.sh/oauth/token"
 
-        res = await self.post(uri, payload, get_token=True)
+        res = await self.post(self.token_url, payload, get_token=True)
 
         self.token = res['access_token']
         self.token_expire = datetime.datetime.now().timestamp() + int(res['expires_in'])

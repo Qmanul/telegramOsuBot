@@ -247,9 +247,9 @@ class NerinyanAPI:
         if os.path.exists(filepath):
             return filepath
 
-        try:
-            await self.download_osz(beatmapset_id)
-        except:
+        await self.download_osz(beatmapset_id)
+
+        if not os.path.isfile(filepath):
             osu_file = await self.download_file(url)
             async with aiofiles.open(filepath, mode='wb') as f:
                 await f.write(osu_file)

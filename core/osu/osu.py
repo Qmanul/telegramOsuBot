@@ -327,13 +327,13 @@ class Osu:
         text += text_playcount
 
         grades = user['statistics']['grade_counts']
-        text_grades = f"▸ <b>Ranks:</b> SSH:{grades['ssh']} SS:{grades['ss']} SH:{grades['sh']} S:{grades['s']} A:{grades['a']}\n"
+        text_grades = f"▸ <b>Ranks:</b> SSH: {grades['ssh']} SS: {grades['ss']} SH: {grades['sh']} S: {grades['s']} A: {grades['a']}\n"
         text += text_grades
 
         footer = ''
         footer += emoji.emojize(':green_circle:') if user['is_online'] else emoji.emojize(':red_circle:')
 
-        if user['last_visit']:
+        if not footer and user['last_visit']:
             delta = datetime.datetime.now(tz=datetime.timezone.utc) - datetime.datetime.fromisoformat(user['last_visit'])
             footer += f' Last Seen {round(delta.seconds / 3600)} Hours Ago' if not delta.days else f' Last Seen {delta.days} Days Ago'
         footer += ' On osu! Bancho Server'

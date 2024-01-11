@@ -86,13 +86,10 @@ async def plot_profile(user):
     graph = await other_utils.fig2img(fig)
     banner = await other_utils.get_image_by_url(user['cover_url'])
 
-    if banner.width > banner.height:
-        scale_factor = graph.width / banner.width
-    else:
-        scale_factor = graph.height / banner.height
+    scale_factor = max(graph.height / banner.height, graph.width / banner.width)
 
     banner = ImageEnhance.Brightness(
-        banner.resize((round(banner.width * scale_factor), round(banner.height * scale_factor)), Image.LANCZOS).crop(
+        banner.resize((round(banner.width * scale_factor) + 1, round(banner.height * scale_factor) + 1), Image.LANCZOS).crop(
             (0, 0, graph.width, graph.height)).filter(ImageFilter.GaussianBlur(10))).enhance(.5)
 
     return Image.alpha_composite(banner, graph)

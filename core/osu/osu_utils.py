@@ -122,7 +122,7 @@ async def process_user_info_recent_achievement(recent_info: dict, date):
 async def process_user_info_recent_rank(recent_info: dict, date):
     map_link = f'<a href="https://osu.ppy.sh{recent_info["beatmap"]["url"]}">{recent_info["beatmap"]["title"]}</a>'
     if 'scoreRank' in recent_info.keys():
-        return f'▸ {recent_info["scoreRank"]} Achieved #{recent_info["rank"]} on {map_link} on {date}\n'
+        return f'▸ ({recent_info["scoreRank"]}) Achieved #{recent_info["rank"]} on {map_link} on {date}\n'
     return f'▸ Lost first on {map_link} on {date}\n'
 
 

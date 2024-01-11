@@ -116,7 +116,7 @@ class Osu:
             username_fin = db_user['username']
 
         if not username_fin:
-            username_fin = list(set(usernames))[0]
+            username_fin = list(set(usernames))[0].replace('"','')
 
         gamemode = 'osu'
         if option_gamemode:

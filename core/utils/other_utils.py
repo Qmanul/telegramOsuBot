@@ -17,3 +17,7 @@ async def fig2img(fig):
     buf.seek(0)
     img = Image.open(buf)
     return img
+
+
+async def format_date(date_str):
+    return

@@ -86,6 +86,7 @@ async def create_play_info(play_info, beatmap, filepath):
 
     text = ''
     rank = f"▸ {play_info['rank']} "
+    print(rank)
     if 'completion' in map_info:
         rank += f'({map_info["completion"]:0.2f}%) '
     text += rank

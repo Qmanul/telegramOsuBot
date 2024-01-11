@@ -348,8 +348,8 @@ class Osu:
                 text += text_recent
 
             extra_info_dict = {'previous_usernames': '▸ <b>Previously known as:</b> {}\n',
-                               'playstyle': '▸ <b>Playstyle:</b>  {}\n',
-                               'follower_count': '▸ <b>Followers:</b>  {}\n',
+                               'playstyle': '▸ <b>Playstyle:</b> {}\n',
+                               'follower_count': '▸ <b>Followers:</b> {}\n',
                                'ranked_and_approved_beatmapset_count': '▸ <b>Ranked/Approved Beatmaps:</b> {}\n',
                                'replays_watched_by_others': '▸ <b>Replays Watched By Others:</b> {}\n'}
             text_extra_info = ''

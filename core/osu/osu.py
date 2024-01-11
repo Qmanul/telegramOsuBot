@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import io
 import re
 from math import ceil
 
@@ -8,9 +9,10 @@ from flag import flag
 from itertools import islice
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandObject
-from aiogram.types import Message
+from aiogram.types import Message, BufferedInputFile
 from aiogram.utils.markdown import hlink
 
+from core.utils import drawing
 from core.utils.option_parser import OptionParser
 from core.database.database import UserDatabase
 from core.osu.osuAPI import OsuApi, NerinyanAPI
@@ -282,8 +284,7 @@ class Osu:
             return
 
         if options['recent']:
-            recent_list = await self.osuAPI.get_user_recent_activity(user_info['id'])
-            await self.user_info_recent_answer(message, user_info, gamemode, recent_list)
+            await self.user_info_recent_answer(message, user_info, gamemode)
             return
 
         if options['beatmaps']:
@@ -294,12 +295,13 @@ class Osu:
             return
 
         if options['detailed']:
+            await self.user_info_answer(message, user_info, gamemode, detailed=True)
             return
 
         await self.user_info_answer(message, user_info, gamemode)
         return
 
-    async def user_info_answer(self, message: Message, user, gamemode):
+    async def user_info_answer(self, message: Message, user, gamemode, **kwargs):
         answer = ''
         header_temp = f'{flag(user["country_code"])} {osu_utils.beautify_mode_text(gamemode)} Profile for {user["username"]}\n'
         header = hlink(header_temp, await self.osuAPI.get_user_url(user['id']))
@@ -332,17 +334,56 @@ class Osu:
         footer += emoji.emojize(':green_circle:') if user['is_online'] else emoji.emojize(':red_circle:')
 
         if user['last_visit']:
-            date = datetime.datetime.fromisoformat(user['last_visit'])
-            delta = datetime.datetime.now(tz=datetime.timezone.utc) - date
-            footer += f' Last Seen {round(delta.seconds / 3600)} Hours Ago'
+            delta = datetime.datetime.now(tz=datetime.timezone.utc) - datetime.datetime.fromisoformat(user['last_visit'])
+            footer += f' Last Seen {round(delta.seconds / 3600)} Hours Ago' if not delta.days else f' Last Seen {delta.days} Days Ago'
         footer += ' On osu! Bancho Server'
+
+        if 'detailed' in kwargs:
+            recent_list = await self.osuAPI.get_user_recent_activity(user['id'])
+            if recent_list:
+                text_recent = '<b>Recent events</b>\n'
+                for recent_event in recent_list[:3]:
+                    date = datetime.datetime.fromisoformat(recent_event['created_at'][:-6]).strftime('%H:%M %d.%m.%Y')
+                    text_recent += await self.recent_event_types_dict[recent_event['type']](recent_event, date)
+                text += text_recent
+
+            extra_info_dict = {'previous_usernames': '▸ <b>Previously known as:</b> {}\n',
+                               'playstyle': '▸ <b>Playstyle:</b>  {}\n',
+                               'follower_count': '▸ <b>Followers:</b>  {}\n',
+                               'ranked_and_approved_beatmapset_count': '▸ <b>Ranked/Approved Beatmaps:</b> {}\n',
+                               'replays_watched_by_others': '▸ <b>Replays Watched By Others:</b> {}\n'}
+            text_extra_info = ''
+            for extra_info_value, extra_info_item in extra_info_dict.items():
+                try:
+                    if user[extra_info_value]:
+                        try:
+                            text_extra_info += extra_info_item.format(", ".join(user[extra_info_value]))
+                        except TypeError:
+                            text_extra_info += extra_info_item.format(user[extra_info_value])
+                except KeyError:
+                    pass
+
+            if text_extra_info:
+                text += '<b>Extra Info</b>\n'
+                text += text_extra_info
+
+            plot = await drawing.plot_profile(user)
+            img_byte_arr = io.BytesIO()
+            plot.save(img_byte_arr, format='PNG')
+            img_byte_arr = img_byte_arr.getvalue()
+            answer += header
+            answer += text
+            answer += footer
+            await message.answer_photo(BufferedInputFile(img_byte_arr, filename='plot.png'), parse_mode=ParseMode.HTML, disable_web_page_preview=True, caption=answer)
+            return
 
         answer += header
         answer += text
         answer += footer
-        await message.answer(answer, parse_mode=ParseMode.HTML)
+        await message.answer(answer, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
 
-    async def user_info_recent_answer(self, message: Message, user, gamemode, recent_list):
+    async def user_info_recent_answer(self, message: Message, user, gamemode):
+        recent_list = await self.osuAPI.get_user_recent_activity(user['id'])
         answer = ''
 
         rank = f'#{user["statistics"]["global_rank"]}' if user['statistics']['global_rank'] else '-'
@@ -371,9 +412,14 @@ class Osu:
         await message.answer(answer, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
 
     async def test(self, message: Message, options: CommandObject):
+        import io
         username = options.args
         user = await self.osuAPI.get_user(username)
-        print(await self.osuAPI.get_user_recent_activity(user_id=user['id']))
+        plot = await drawing.plot_profile(user)
+        img_byte_arr = io.BytesIO()
+        plot.save(img_byte_arr, format='PNG')
+        img_byte_arr = img_byte_arr.getvalue()
+        await message.answer_photo(BufferedInputFile(img_byte_arr, filename='plot.png'))
 
     @staticmethod
     def _gamemode_option_parser(inputs):

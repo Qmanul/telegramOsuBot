@@ -12,7 +12,7 @@ from aiogram.filters import CommandObject
 from aiogram.types import Message, BufferedInputFile
 from aiogram.utils.markdown import hlink
 
-from core.utils import drawing
+from core.utils import drawing, other_utils
 from core.utils.option_parser import OptionParser
 from core.database.database import UserDatabase
 from core.osu.osuAPI import OsuApi, NerinyanAPI
@@ -233,7 +233,7 @@ class Osu:
             answer += f'{play_info["index"] + 1}) '
             answer += title
             answer += text
-            answer += f'▸ Score Set On {score_date}\n'
+            answer += f'▸ Score Set {score_date}\n'
 
         footer = f'On osu! Bancho Server | Page {page // 5 + 1} of {max_page}'
         answer += footer
@@ -312,9 +312,8 @@ class Osu:
         text_rank = f"▸ <b>Bancho Rank:</b> {rank} ({user['country_code']}{country_rank})\n"
         text += text_rank
 
-        peak_rank_date = datetime.datetime.fromisoformat(user['rank_highest']['updated_at'][:-1]).strftime(
-            '%d.%m.%Y %H:%M')
-        text_peak_rank = f"▸ <b>Peak Rank:</b> #{user['rank_highest']['rank']} achived on {peak_rank_date}\n"
+        peak_rank_date = await other_utils.format_date(user['rank_highest']['updated_at'][:-1])
+        text_peak_rank = f"▸ <b>Peak Rank:</b> #{user['rank_highest']['rank']} achived {peak_rank_date}\n"
         text += text_peak_rank
 
         text_level = f"▸ <b>Level:</b> {user['statistics']['level']['current']} + {user['statistics']['level']['progress']}%\n"
@@ -334,8 +333,8 @@ class Osu:
         footer += emoji.emojize(':green_circle:') if user['is_online'] else emoji.emojize(':red_circle:')
 
         if not footer and user['last_visit']:
-            delta = datetime.datetime.now(tz=datetime.timezone.utc) - datetime.datetime.fromisoformat(user['last_visit'])
-            footer += f' Last Seen {round(delta.seconds / 3600)} Hours Ago' if not delta.days else f' Last Seen {delta.days} Days Ago'
+            visit_delta = await other_utils.format_date(user['last_visit'])
+            footer += f' Last Seen {visit_delta}'
         footer += ' On osu! Bancho Server'
 
         if 'detailed' in kwargs:
@@ -343,7 +342,7 @@ class Osu:
             if recent_list:
                 text_recent = '<b>Recent events</b>\n'
                 for recent_event in recent_list[:3]:
-                    date = datetime.datetime.fromisoformat(recent_event['created_at'][:-6]).strftime('%H:%M %d.%m.%Y')
+                    date = await other_utils.format_date(recent_event['created_at'][:-6])
                     text_recent += await self.recent_event_types_dict[recent_event['type']](recent_event, date)
                 text += text_recent
 
@@ -394,16 +393,15 @@ class Osu:
 
         text = ''
         for recent_info in recent_list[:10]:
-            date = datetime.datetime.fromisoformat(recent_info['created_at'][:-6]).strftime('%H:%M %d.%m.%Y')
+            date = await other_utils.format_date(recent_info['created_at'][:-6])
             text += await self.recent_event_types_dict[recent_info['type']](recent_info, date)
 
         footer = ''
         footer += emoji.emojize(':green_circle:') if user['is_online'] else emoji.emojize(':red_circle:')
 
-        if user['last_visit']:
-            date = datetime.datetime.fromisoformat(user['last_visit'])
-            delta = datetime.datetime.now(tz=datetime.timezone.utc) - date
-            footer += f' Last Seen {round(delta.seconds / 3600)} Hours Ago'
+        if not footer and user['last_visit']:
+            visit_delta = await other_utils.format_date(user['last_visit'])
+            footer += f' Last Seen {visit_delta}'
         footer += ' On osu! Bancho Server'
 
         answer += header

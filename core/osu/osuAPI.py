@@ -268,7 +268,7 @@ class NerinyanAPI:
             r.extractall(self.extract_path)
 
         for osu_file in glob.glob(os.path.join(self.extract_path, '*.osu')):  # находим все .osu файлы и итерируем по ним
-            async with aiofiles.open(osu_file, 'r') as f:
+            async with aiofiles.open(osu_file, 'r', encoding='utf-8') as f:
                 async for line in f:
                     if 'BeatmapID:' not in line:
                         continue

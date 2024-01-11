@@ -26,15 +26,15 @@ async def format_date(date_str):
     date_delta = relativedelta(datetime.utcnow(), datetime.fromisoformat(date_str))
     result = []
     if date_delta.years:
-        result.append(f'{date_delta.years} Years')
+        result.append(f'{date_delta.years} Year{"s"[:date_delta.years^1]}')
     if date_delta.months:
-        result.append(f'{date_delta.months} Months')
+        result.append(f'{date_delta.months} Month{"s"[:date_delta.months^1]}')
     if date_delta.days:
-        result.append(f'{date_delta.days} Days')
+        result.append(f'{date_delta.days} Day{"s"[:date_delta.days^1]}')
     if date_delta.hours:
-        result.append(f'{date_delta.hours} Hours')
+        result.append(f'{date_delta.hours} Hour{"s"[:date_delta.hours^1]}')
     if date_delta.minutes:
-        result.append(f'{date_delta.minutes} Minutes')
+        result.append(f'{date_delta.minutes} Minute{"s"[:date_delta.minutes^1]}')
     if not result:
         return 'Just Now'
     result = ' '.join(result[:2]) + ' Ago'

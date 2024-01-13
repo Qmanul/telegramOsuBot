@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import io
 import re
 from math import ceil
@@ -43,6 +42,17 @@ class Osu:
             'userSupportAgain': osu_utils.process_user_info_recent_userSupport,
             'usernameChange': osu_utils.process_user_info_recent_usernameChange
         }
+        self.options = {'user_info': [{'opt': 'r', 'opt_value': 'recent', 'opt_type': None, 'default': False},
+                                      {'opt': 'b', 'opt_value': 'beatmaps', 'opt_type': str, 'default': None},
+                                      {'opt': 'mp', 'opt_value': 'mostplayed', 'opt_type': None, 'default': False},
+                                      {'opt': 'd', 'opt_value': 'detailed', 'opt_type': None, 'default': False}],
+                        'user_recent': [{'opt': 'b', 'opt_value': 'best', 'opt_type': None, 'default': False},
+                                        {'opt': 'ps', 'opt_value': 'pass', 'opt_type': None, 'default': False},
+                                        {'opt': 'i', 'opt_value': 'index', 'opt_type': int, 'default': None},
+                                        {'opt': 'p', 'opt_value': 'page', 'opt_type': int, 'default': None},
+                                        {'opt': '?', 'opt_value': 'search', 'opt_type': str, 'default': None},
+                                        {'opt': 'l', 'opt_value': 'list', 'opt_type': None, 'default': False}]
+                        }
 
     async def process_set_user(self, message: Message, command: CommandObject):
         user = message.from_user
@@ -85,48 +95,26 @@ class Osu:
             await message.answer(f'{user.first_name}, your username has been edited to `{osu_user["username"]}`.')
 
     # get user's recent score
-    async def process_user_recent(self, message: Message, options: CommandObject):
-        user = message.from_user
-        inputs = []
-        if options.args:
-            inputs = re.findall(r'\".+?\"|\S+', options.args)
-
-        db_user = await self.user_db.get_user(user.id)
-        if db_user:
-            db_user = {  # fuck tuples
-                'telegram_user_id': db_user[0],
-                'username': db_user[1],
-                'user_id': db_user[2],
-                'gamemode': db_user[3]
-            }
-
+    async def process_user_recent(self, message: Message, opt: CommandObject):
+        processed_options = await self.process_user_inputs(message.from_user, opt.args, 'user_recent')
         try:
-            username_options, option_gamemode = self._gamemode_option_parser(inputs)
-            usernames, options = self._option_parser_recent(username_options)
-        except TypeError:
-            await message.answer('Please check your inputs for errors!')
+            username, option_gamemode, options = processed_options
+        except ValueError:
+            await message.answer(processed_options)
             return
 
-        username_fin = None
+        gamemode = option_gamemode if option_gamemode else 'osu'
+        user_info = await self.osuAPI.get_user(username, gamemode)
+        try:
+            user_info['error']
+            await message.answer(f'{username} was not found')
+            return
+        except KeyError:
+            pass
 
-        if not usernames:
-            if not db_user:
-                await message.answer('No players found.')
-                return
-            username_fin = db_user['username']
-
-        if not username_fin:
-            username_fin = list(set(usernames))[0].replace('"','')
-
-        gamemode = 'osu'
-        if option_gamemode:
-            gamemode = option_gamemode
-        elif db_user:
-            gamemode = db_user['gamemode']
-
-        user_info = await self.osuAPI.get_user(username_fin, gamemode)
+        user_info = await self.osuAPI.get_user(username, gamemode)
         if not user_info or 'error' in user_info:
-            await message.answer(f'{username_fin} was not found')
+            await message.answer(f'{username} was not found')
             return
 
         include_fails = 0 if options['pass'] else 1
@@ -237,51 +225,24 @@ class Osu:
 
         footer = f'On osu! Bancho Server | Page {page // 5 + 1} of {max_page}'
         answer += footer
-        await message.answer(answer, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
         return
 
-    async def process_user_info(self, message: Message, options: CommandObject, gamemode='osu'):
-        user = message.from_user
-        inputs = []
-        if options.args:
-            inputs = re.findall(r'\".+?\"|\S+', options.args)
-
-        db_user = await self.user_db.get_user(user.id)
-        if db_user:
-            db_user = {  # fuck tuples
-                'telegram_user_id': db_user[0],
-                'username': db_user[1],
-                'user_id': db_user[2],
-                'gamemode': db_user[3]
-            }
-
+    async def process_user_info(self, message: Message, opt: CommandObject, gamemode):
+        processed_options = await self.process_user_inputs(message.from_user, opt.args, 'user_info')
         try:
-            username_options, option_gamemode = self._gamemode_option_parser(inputs)
-            usernames, options = self._option_parser_user_info(username_options)
-        except TypeError:
-            await message.answer('Please check your inputs for errors!')
+            username, option_gamemode, options = processed_options
+        except ValueError:
+            await message.answer(processed_options)
             return
 
-        username_fin = None
-
-        if not usernames:
-            if not db_user:
-                await message.answer('No players found.')
-                return
-            username_fin = db_user['username']
-
-        if not username_fin:
-            username_fin = list(set(usernames))[0].replace('"', '')
-
-        if option_gamemode:
-            gamemode = option_gamemode
-        elif db_user:
-            gamemode = db_user['gamemode']
-
-        user_info = await self.osuAPI.get_user(username_fin, gamemode)
-        if not user_info or 'error' in user_info:
-            await message.answer(f'{username_fin} was not found')
+        gamemode = option_gamemode if option_gamemode else gamemode
+        user_info = await self.osuAPI.get_user(username, gamemode)
+        try:
+            user_info['error']
+            await message.answer(f'{username} was not found')
             return
+        except KeyError:
+            pass
 
         if options['recent']:
             await self.user_info_recent_answer(message, user_info, gamemode)
@@ -373,7 +334,8 @@ class Osu:
             answer += header
             answer += text
             answer += footer
-            await message.answer_photo(BufferedInputFile(img_byte_arr, filename='plot.png'), parse_mode=ParseMode.HTML, disable_web_page_preview=True, caption=answer)
+            await message.answer_photo(BufferedInputFile(img_byte_arr, filename='plot.png'), parse_mode=ParseMode.HTML,
+                                       disable_web_page_preview=True, caption=answer)
             return
 
         answer += header
@@ -419,6 +381,46 @@ class Osu:
         img_byte_arr = img_byte_arr.getvalue()
         await message.answer_photo(BufferedInputFile(img_byte_arr, filename='plot.png'))
 
+    async def process_user_inputs(self, telegram_user, args, options_type):
+        try:
+            inputs = re.findall(r'\".+?\"|\S+', args)
+        except TypeError:
+            inputs = []
+
+        db_user = await self.user_db.get_user(telegram_user.id)
+        try:
+            db_user = {  # fuck tuples
+                'telegram_user_id': db_user[0],
+                'username': db_user[1],
+                'user_id': db_user[2],
+                'gamemode': db_user[3]
+            }
+        except KeyError:
+            pass
+
+        try:
+            username_options, option_gamemode = self._gamemode_option_parser(inputs)
+            usernames, options = self._option_parser(username_options, self.options[options_type])
+        except TypeError:
+            return 'Please check your inputs for errors!'
+
+        if not usernames:
+            try:
+                username_fin = db_user['username']
+            except KeyError:
+                return 'No players found'
+        else:
+            username_fin = list(set(usernames))[0].replace('"', '')
+
+        try:
+            gamemode = db_user['gamemode']
+        except KeyError:
+            gamemode = None
+        if option_gamemode:
+            gamemode = option_gamemode
+
+        return username_fin, gamemode, options
+
     @staticmethod
     def _gamemode_option_parser(inputs):
         option_parser = OptionParser()
@@ -437,25 +439,8 @@ class Osu:
         return outputs, final_gamemode
 
     @staticmethod
-    def _option_parser_recent(inputs):
+    def _option_parser(inputs, options):
         option_parser = OptionParser()
-        option_parser.add_option(opt='b', opt_value='best', opt_type=None, default=False)
-        option_parser.add_option(opt='ps', opt_value='pass', opt_type=None, default=False)
-        option_parser.add_option(opt='i', opt_value='index', opt_type=int, default=None)
-        option_parser.add_option(opt='p', opt_value='page', opt_type=int, default=None)
-        option_parser.add_option(opt='?', opt_value='search', opt_type=str, default=None)
-        option_parser.add_option(opt='l', opt_value='list', opt_type=None, default=False)
-        usernames, options = option_parser.parse(inputs)
-
-        return usernames, options
-
-    @staticmethod
-    def _option_parser_user_info(inputs):
-        option_parser = OptionParser()
-        option_parser.add_option(opt='r', opt_value='recent', opt_type=None, default=False)
-        option_parser.add_option(opt='b', opt_value='beatmaps', opt_type=str, default=None)
-        option_parser.add_option(opt='mp', opt_value='mostplayed', opt_type=None, default=False)
-        option_parser.add_option(opt='d', opt_value='detailed', opt_type=None, default=False)
-        usernames, options = option_parser.parse(inputs)
-
-        return usernames, options
+        for option in options:
+            option_parser.add_option(option['opt'], option['opt_value'], option['opt_type'], option['default'])
+        return option_parser.parse(inputs)

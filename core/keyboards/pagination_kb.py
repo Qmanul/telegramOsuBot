@@ -1,18 +1,14 @@
-from typing import Optional
-
 from aiogram.filters.callback_data import CallbackData
-from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
-def get_pagination_kb(page):
+def get_pagination_kb(data):
     builder = InlineKeyboardBuilder()
-    builder.button(
-        text="<<", callback_data=PaginationCallbackFactory(action="backward", page=page)
-    )
-    builder.button(
-        text=">>", callback_data=PaginationCallbackFactory(action="forward", page=page)
-    )
+    for button_data in data:
+        builder.button(
+            text=button_data['text'],
+            callback_data=PaginationCallbackFactory(action=button_data['action'], page=button_data['page'])
+        )
     return builder.as_markup()
 
 

@@ -17,6 +17,7 @@ from core.database.database import UserDatabase
 from core.osu.osuAPI import OsuApi, NerinyanAPI
 from config_reader import config
 from core.osu import osu_utils
+from core.keyboards import pagination_kb
 
 
 class Osu:
@@ -149,9 +150,9 @@ class Osu:
         if options['list']:
             try:
                 page = int(options['page']) - 1
-            except KeyError:
+            except TypeError:
                 page = 0
-            return await self.recent_answer_list(message, user_info, play_list, gamemode, page)
+            return await self.recent_answer_list(user_info, play_list, gamemode, page)
 
         if options['index']:
             try:
@@ -170,9 +171,9 @@ class Osu:
             answer_type = 'Recent'
             tries_count = await osu_utils.get_number_of_tries(play_list, play_fin['beatmap']['id'])
 
-        return await self.recent_answer(message, user_info, play_fin, gamemode, answer_type, tries_count)
+        return await self.recent_answer(user_info, play_fin, gamemode, answer_type, tries_count)
 
-    async def recent_answer(self, message: Message, user_info, play_info, gamemode, answer_type, tries_count):
+    async def recent_answer(self, user_info, play_info, gamemode, answer_type, tries_count):
         answer = ''
         beatmap = await self.osuAPI.get_beatmap(play_info['beatmap']['id'])
         filepath = await self.osuAPI.download_beatmap(beatmap_info=beatmap, api='nerinyan')
@@ -194,7 +195,7 @@ class Osu:
 
         return {'answer': answer, 'parse_mode': ParseMode.HTML, 'disable_web_page_preview': False}
 
-    async def recent_answer_list(self, message: Message, user_info, play_list: list, gamemode, page):
+    async def recent_answer_list(self, user_info, play_list: list, gamemode, page):
 
         answer = ''
         header = f'{flag(user_info["country_code"])} Recent {osu_utils.beautify_mode_text(gamemode)} Plays for {user_info["username"]}:\n'
@@ -218,7 +219,20 @@ class Osu:
 
         footer = f'On osu! Bancho Server | Page {page // 5 + 1} of {max_page}'
         answer += footer
-        return {'answer': answer, 'parse_mode': ParseMode.HTML, 'disable_web_page_preview': False}
+        data = []
+        if not page == 5:
+            data.append({
+                'action': 'backward',
+                'page': page,
+                'text': '<<'
+            })
+        if not page // 5 + 1 == max_page:
+            data.append({
+                'action': 'forward',
+                'page': page,
+                'text': '>>'
+            })
+        return {'answer': answer, 'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}  # ,'keyboard': pagination_kb.get_pagination_kb(data=data)
 
     async def process_user_info(self, message: Message, opt: CommandObject, gamemode):
         processed_options = await self.process_user_inputs(message.from_user, opt.args, 'user_info')
@@ -237,7 +251,7 @@ class Osu:
             pass
 
         if options['recent']:
-            return await self.user_info_recent_answer(message, user_info, gamemode)
+            return await self.user_info_recent_answer(user_info, gamemode)
 
         if options['beatmaps']:
             bmp_type = options['beatmaps']
@@ -247,11 +261,11 @@ class Osu:
             return
 
         if options['detailed']:
-            return await self.user_info_answer(message, user_info, gamemode, detailed=True)
+            return await self.user_info_answer(user_info, gamemode, detailed=True)
 
-        return await self.user_info_answer(message, user_info, gamemode)
+        return await self.user_info_answer(user_info, gamemode)
 
-    async def user_info_answer(self, message: Message, user, gamemode, **kwargs):
+    async def user_info_answer(self, user, gamemode, **kwargs):
         answer = ''
         header_temp = f'{flag(user["country_code"])} {osu_utils.beautify_mode_text(gamemode)} Profile for {user["username"]}\n'
         header = hlink(header_temp, await self.osuAPI.get_user_url(user['id']))
@@ -331,7 +345,7 @@ class Osu:
         answer += footer
         return {'answer': answer, 'parse_mode': ParseMode.HTML, 'disable_web_page_preview': False}
 
-    async def user_info_recent_answer(self, message: Message, user, gamemode):
+    async def user_info_recent_answer(self, user, gamemode):
         recent_list = await self.osuAPI.get_user_recent_activity(user['id'])
         answer = ''
 

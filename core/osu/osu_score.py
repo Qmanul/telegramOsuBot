@@ -1,8 +1,6 @@
 from itertools import islice
 from math import ceil
-
 from aiogram.enums import ParseMode
-from aiogram.filters import CommandObject
 from flag import flag
 
 from core.osu import osu_utils

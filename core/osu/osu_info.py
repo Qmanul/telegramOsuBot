@@ -1,9 +1,7 @@
 import asyncio
 import io
-
 import emoji
 from aiogram.enums import ParseMode
-from aiogram.filters import CommandObject
 from aiogram.types import BufferedInputFile
 from aiogram.utils.markdown import hlink
 from flag import flag

@@ -12,7 +12,7 @@ osu = OsuScore()
 
 @router.message(Command("recent", "rs", prefix=">"))
 async def cmd_recent(message: types.Message, command: CommandObject):
-    answer = await osu.process_user_recent(message, command)
+    answer = await osu.process_user_recent(message.from_user, command.args)
     try:
         await message.answer(answer['answer'], disable_web_page_preview=answer['disable_web_page_preview'],
                              parse_mode=ParseMode.HTML)

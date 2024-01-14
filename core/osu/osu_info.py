@@ -4,7 +4,7 @@ import io
 import emoji
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandObject
-from aiogram.types import Message, BufferedInputFile
+from aiogram.types import BufferedInputFile
 from aiogram.utils.markdown import hlink
 from flag import flag
 
@@ -37,20 +37,18 @@ class OsuInfo(Osu):
                                 'replays_watched_by_others': '▸ <b>Replays Watched By Others:</b> {}\n'
                                 }
 
-    async def process_set_user(self, message: Message, command: CommandObject):
-        user = message.from_user
-
-        if command.args is None:
+    async def process_set_user(self, telegram_user, args):
+        if args is None:
             return {'answer': 'No username'}
-        username = command.args
+        username = args
 
         if username == 'NONE':
             user_update = {
                 'username': None,
                 'user_id': None
             }
-            await self.user_db.update_user(user.id, user_update)
-            return {'answer': f'{user.first_name}, your username has been removed.', 'parse_mode': ParseMode.HTML}
+            await self.user_db.update_user(telegram_user.id, user_update)
+            return {'answer': f'{telegram_user.first_name}, your username has been removed.', 'parse_mode': ParseMode.HTML}
 
         osu_user = None
 
@@ -63,20 +61,20 @@ class OsuInfo(Osu):
         if not osu_user:
             return f"{username} doesn't exists"
 
-        if not await self.user_db.check_user_exists(user.id):
-            await self.user_db.create_new_user(user, osu_user)
+        if not await self.user_db.check_user_exists(telegram_user.id):
+            await self.user_db.create_new_user(telegram_user, osu_user)
             answer_type = 'linked'
         else:
             user_update = {
                 'user_id': osu_user['id'],
                 'username': osu_user['username']
             }
-            await self.user_db.update_user(user.id, user_update)
+            await self.user_db.update_user(telegram_user.id, user_update)
             answer_type = 'edited'
-        return {'answer': f'{user.first_name}, your username has been {answer_type} to `{osu_user["username"]}`.'}
+        return {'answer': f'{telegram_user.first_name}, your username has been {answer_type} to `{osu_user["username"]}`.'}
 
-    async def process_user_info(self, message: Message, opt: CommandObject, gamemode):
-        processed_options = await self.process_user_inputs(message.from_user, opt.args, 'user_info')
+    async def process_user_info(self, telegra_user, args, gamemode):
+        processed_options = await self.process_user_inputs(telegra_user, args, 'user_info')
         try:
             username, option_gamemode, options = processed_options
         except ValueError:
@@ -86,8 +84,7 @@ class OsuInfo(Osu):
         user_info = await self.osuAPI.get_user(username, gamemode)
         try:
             user_info['error']
-            return {'answer': f'{username} was not found', 'parse_mode': ParseMode.HTML,
-                    }
+            return {'answer': f'{username} was not found', 'parse_mode': ParseMode.HTML}
         except KeyError:
             pass
 

@@ -3,7 +3,6 @@ from math import ceil
 
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandObject
-from aiogram.types import Message
 from flag import flag
 
 from core.osu import osu_utils
@@ -14,8 +13,8 @@ class OsuScore(Osu):
     def __init__(self):
         super().__init__()
 
-    async def process_user_recent(self, message: Message, opt: CommandObject):
-        processed_options = await self.process_user_inputs(message.from_user, opt.args, 'user_recent')
+    async def process_user_recent(self, telegram_user, args):
+        processed_options = await self.process_user_inputs(telegram_user, args, 'user_recent')
         try:
             username, option_gamemode, options = processed_options
         except ValueError:

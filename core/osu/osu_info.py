@@ -76,7 +76,7 @@ class OsuInfo(Osu):
     async def process_user_info(self, telegra_user, args, gamemode):
         processed_options = await self.process_user_inputs(telegra_user, args, 'user_info')
         try:
-            username, option_gamemode, options = processed_options
+            username, option_gamemode, options, _ = processed_options
         except ValueError:
             return {'answer': processed_options, }
 

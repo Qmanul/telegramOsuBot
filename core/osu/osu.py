@@ -73,13 +73,14 @@ class Osu:
             username_fin = list(set(usernames))[0].replace('"', '')
 
         try:
-            gamemode = db_user['gamemode']
+            db_gamemode = db_user['gamemode']
         except KeyError:
-            gamemode = None
+            db_gamemode = None
+        gamemode = None
         if option_gamemode:
             gamemode = option_gamemode
 
-        return username_fin, gamemode, options
+        return username_fin, gamemode, options, db_gamemode
 
     @staticmethod
     async def _gamemode_option_parser(inputs):

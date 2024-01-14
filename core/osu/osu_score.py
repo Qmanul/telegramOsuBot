@@ -16,11 +16,16 @@ class OsuScore(Osu):
     async def process_user_recent(self, telegram_user, args):
         processed_options = await self.process_user_inputs(telegram_user, args, 'user_recent')
         try:
-            username, option_gamemode, options = processed_options
+            username, option_gamemode, options, db_gamemode = processed_options
         except ValueError:
-            return {'answer': processed_options, }
+            return {'answer': processed_options}
 
-        gamemode = option_gamemode if option_gamemode else 'osu'
+        gamemode = 'osu'
+        if option_gamemode:
+            gamemode = option_gamemode
+        elif db_gamemode:
+            gamemode = db_gamemode
+
         user_info = await self.osuAPI.get_user(username, gamemode)
         try:
             user_info['error']

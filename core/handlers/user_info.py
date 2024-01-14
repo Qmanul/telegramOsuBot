@@ -3,7 +3,7 @@ from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandObject
 from aiogram import types
 
-from core.osu.osu import OsuInfo
+from core.osu.osu_info import OsuInfo
 
 
 osu = OsuInfo()

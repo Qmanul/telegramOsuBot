@@ -102,7 +102,7 @@ async def create_play_info(play_info, beatmap, filepath):
     acc_text = f"▸ {play_info['accuracy'] * 100:0.2f}%\n"
     text += acc_text
 
-    score_text = f"▸ {play_info['score']} "
+    score_text = f"▸ {format(play_info['score'], ',')} "
     text += score_text
 
     combo_text = f"▸ x{play_info['max_combo']}/{beatmap['max_combo']} "

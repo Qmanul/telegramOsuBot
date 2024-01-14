@@ -58,8 +58,7 @@ class Osu:
         user = message.from_user
 
         if command.args is None:
-            # await message.answer('No username')
-            return {'answer': 'No username'}
+            return {'answer': 'No username', 'parse_mode': ParseMode.HTML, 'disable_web_page_preview': False}
         username = command.args
 
         if username == 'NONE':
@@ -68,8 +67,8 @@ class Osu:
                 'user_id': None
             }
             await self.user_db.update_user(user.id, user_update)
-            # await message.answer(f'{user.first_name}, your username has been removed.')
-            return {'answer': f'{user.first_name}, your username has been removed.'}
+            return {'answer': f'{user.first_name}, your username has been removed.', 'parse_mode': ParseMode.HTML,
+                    'disable_web_page_preview': False}
 
         osu_user = None
 
@@ -80,21 +79,20 @@ class Osu:
             await asyncio.sleep(.5)
 
         if not osu_user:
-            # await message.answer(f"{username} doesn't exists")
             return f"{username} doesn't exists"
 
         if not await self.user_db.check_user_exists(user.id):
             await self.user_db.create_new_user(user, osu_user)
-            # await message.answer(f'{user.first_name}, your account has been linked to `{osu_user["username"]}`.')
-            return {'answer': f'{user.first_name}, your account has been linked to `{osu_user["username"]}`.'}
+            return {'answer': f'{user.first_name}, your account has been linked to `{osu_user["username"]}`.',
+                    'parse_mode': ParseMode.HTML, 'disable_web_page_preview': False}
         else:
             user_update = {
                 'user_id': osu_user['id'],
                 'username': osu_user['username']
             }
             await self.user_db.update_user(user.id, user_update)
-            #  await message.answer(f'{user.first_name}, your username has been edited to `{osu_user["username"]}`.')
-            return {'answer': f'{user.first_name}, your username has been edited to `{osu_user["username"]}`.'}
+            return {'answer': f'{user.first_name}, your username has been edited to `{osu_user["username"]}`.',
+                    'parse_mode': ParseMode.HTML, 'disable_web_page_preview': False}
 
     # get user's recent score
     async def process_user_recent(self, message: Message, opt: CommandObject):
@@ -102,15 +100,14 @@ class Osu:
         try:
             username, option_gamemode, options = processed_options
         except ValueError:
-            # await message.answer(processed_options)
-            return {'answer': processed_options}
+            return {'answer': processed_options, 'parse_mode': ParseMode.HTML, 'disable_web_page_preview': False}
 
         gamemode = option_gamemode if option_gamemode else 'osu'
         user_info = await self.osuAPI.get_user(username, gamemode)
         try:
             user_info['error']
-            # await message.answer(f'{username} was not found')
-            return {'answer': f'{username} was not found'}
+            return {'answer': f'{username} was not found', 'parse_mode': ParseMode.HTML,
+                    'disable_web_page_preview': False}
         except KeyError:
             pass
 
@@ -125,8 +122,9 @@ class Osu:
             play_list = await self.osuAPI.get_user_recent(user_id=user_info['id'], mode=gamemode,
                                                           include_fails=include_fails)
             if not play_list:
-                # await message.answer(f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)}')
-                return {'answer': f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)}'}
+                return {
+                    'answer': f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)}',
+                    'parse_mode': ParseMode.HTML, 'disable_web_page_preview': False}
 
             await osu_utils.add_index_key(play_list)
 
@@ -137,29 +135,31 @@ class Osu:
                 if not all(key in play_info for key in ['beatmap', 'beatmapset']):
                     play_list.remove(play_info)
                     continue
-                map_title = play_info['beatmapset']['title']
-                map_artist = play_info['beatmapset']['artist']
-                mapper = play_info['beatmapset']['creator']
-                diff = play_info['beatmap']['version']
-                title = f'{map_artist} {map_title} {mapper} {diff}'.lower()
-                if any(query in title for query in queries):
+                title = (f"{play_info['beatmapset']['artist']} {play_info['beatmapset']['title']} "
+                         f"{play_info['beatmapset']['creator']} {play_info['beatmap']['version']}").lower()
+                if not set(title.split()).isdisjoint(queries):
                     temp_play_list.append(play_info)
 
             if not temp_play_list:
-                # await message.answer(f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)} with those options.')
-                return {'answer': f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)} with those options.'}
+                return {
+                    'answer': f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)} with those options.',
+                    'parse_mode': ParseMode.HTML, 'disable_web_page_preview': False}
             play_list = temp_play_list
 
         if options['list']:
-            page = int(options['page']) - 1 if options['page'] else 0
+            try:
+                page = int(options['page']) - 1
+            except KeyError:
+                page = 0
             return await self.recent_answer_list(message, user_info, play_list, gamemode, page)
 
         if options['index']:
-            index = options['index'] - 1
-            if index > len(play_list) or index <= 0:
-                # await message.answer(f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)} with those options.')
-                return {'answer': f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)} with those options.'}
-            play_fin = play_list[index]
+            try:
+                play_fin = play_list[options['index'] - 1]
+            except IndexError:
+                return {
+                    'answer': f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)} with those options.',
+                    'parse_mode': ParseMode.HTML, 'disable_web_page_preview': False}
         else:
             play_fin = play_list[0]
 
@@ -192,8 +192,7 @@ class Osu:
         answer += text
         answer += footer
 
-        # await message.answer(answer, parse_mode=ParseMode.HTML)
-        return {'answer': answer}
+        return {'answer': answer, 'parse_mode': ParseMode.HTML, 'disable_web_page_preview': False}
 
     async def recent_answer_list(self, message: Message, user_info, play_list: list, gamemode, page):
 
@@ -202,8 +201,9 @@ class Osu:
         answer += header
         max_page = ceil(len(play_list) / 5)
         if page > max_page:
-            # await message.answer(f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)} with those options.')
-            return {'answer': f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)} with those options.'}
+            return {
+                'answer': f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)} with those options.',
+                'parse_mode': ParseMode.HTML, 'disable_web_page_preview': False}
         page = 5 * page
 
         for play_info in islice(play_list, page, page + min(len(play_list) - page, 5)):
@@ -218,22 +218,21 @@ class Osu:
 
         footer = f'On osu! Bancho Server | Page {page // 5 + 1} of {max_page}'
         answer += footer
-        return {'answer': answer}
+        return {'answer': answer, 'parse_mode': ParseMode.HTML, 'disable_web_page_preview': False}
 
     async def process_user_info(self, message: Message, opt: CommandObject, gamemode):
         processed_options = await self.process_user_inputs(message.from_user, opt.args, 'user_info')
         try:
             username, option_gamemode, options = processed_options
         except ValueError:
-            # await message.answer(processed_options)
-            return {'answer': processed_options}
+            return {'answer': processed_options, 'parse_mode': ParseMode.HTML, 'disable_web_page_preview': False}
 
         gamemode = option_gamemode if option_gamemode else gamemode
         user_info = await self.osuAPI.get_user(username, gamemode)
         try:
             user_info['error']
-            # await message.answer(f'{username} was not found')
-            return {'answer': f'{username} was not found'}
+            return {'answer': f'{username} was not found', 'parse_mode': ParseMode.HTML,
+                    'disable_web_page_preview': False}
         except KeyError:
             pass
 
@@ -324,14 +323,13 @@ class Osu:
             answer += header
             answer += text
             answer += footer
-            # await message.answer_photo(BufferedInputFile(img_byte_arr, filename='plot.png'), parse_mode=ParseMode.HTML, disable_web_page_preview=True, caption=answer)
-            return {'answer': f'{user.first_name}, your username has been removed.', 'photo':BufferedInputFile(img_byte_arr, filename='plot.png')}
+            return {'answer': answer, 'photo': BufferedInputFile(img_byte_arr, filename='plot.png'),
+                    'parse_mode': ParseMode.HTML, 'disable_web_page_preview': False}
 
         answer += header
         answer += text
         answer += footer
-        # await message.answer(answer, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
-        return {'answer': answer}
+        return {'answer': answer, 'parse_mode': ParseMode.HTML, 'disable_web_page_preview': False}
 
     async def user_info_recent_answer(self, message: Message, user, gamemode):
         recent_list = await self.osuAPI.get_user_recent_activity(user['id'])
@@ -359,8 +357,7 @@ class Osu:
         answer += header
         answer += text
         answer += footer
-        # await message.answer(answer, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
-        return {'answer': answer}
+        return {'answer': answer, 'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
 
     async def test(self, message: Message, options: CommandObject):
         import io
@@ -370,8 +367,8 @@ class Osu:
         img_byte_arr = io.BytesIO()
         plot.save(img_byte_arr, format='PNG')
         img_byte_arr = img_byte_arr.getvalue()
-        # await message.answer_photo(BufferedInputFile(img_byte_arr, filename='plot.png'))
-        return {'photo': BufferedInputFile(img_byte_arr, filename='plot.png'), 'answer': ''}
+        return {'photo': BufferedInputFile(img_byte_arr, filename='plot.png'), 'answer': '',
+                'parse_mode': ParseMode.HTML, 'disable_web_page_preview': False}
 
     async def process_user_inputs(self, telegram_user, args, options_type):
         try:

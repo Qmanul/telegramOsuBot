@@ -11,9 +11,13 @@ osu = Osu()
 
 @router.message(Command("recent", "rs", prefix=">"))
 async def cmd_recent(message: types.Message, command: CommandObject):
-    await osu.process_user_recent(message, command)
+    answer = await osu.process_user_recent(message, command)
+    await message.answer(answer['answer'], disable_web_page_preview=answer['disable_web_page_preview'],
+                         parse_mode=answer['parse_mode'])
 
 
 @router.message(Command("test", prefix=">"))
 async def cmt_test(message: types.Message, command: CommandObject):
-    await osu.test(message, command)
+    answer = await osu.test(message, command)
+    await message.answer(answer['answer'], disable_web_page_preview=answer['disable_web_page_preview'],
+                         parse_mode=answer['parse_mode'])

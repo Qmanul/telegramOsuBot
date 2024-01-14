@@ -3,11 +3,11 @@ from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandObject
 from aiogram import types
 
-from core.osu.osu import Osu
+from core.osu.osu import OsuScores
 
 
 router = Router()
-osu = Osu()
+osu = OsuScores()
 
 
 @router.message(Command("recent", "rs", prefix=">"))
@@ -22,5 +22,5 @@ async def cmd_recent(message: types.Message, command: CommandObject):
 
 @router.message(Command("test", prefix=">"))
 async def cmt_test(message: types.Message, command: CommandObject):
-    answer = await osu.test(message, command)
+    answer = await osu.test(command)
     await message.answer(answer['answer'], parse_mode=ParseMode.HTML)

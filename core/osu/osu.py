@@ -17,7 +17,6 @@ from core.database.database import UserDatabase
 from core.osu.osuAPI import OsuApi, NerinyanAPI
 from config_reader import config
 from core.osu import osu_utils
-from core.keyboards import pagination_kb
 
 
 class Osu:
@@ -29,6 +28,96 @@ class Osu:
         self.nerinyanAPI = NerinyanAPI()
         self.user_db = UserDatabase()
         self.gamemodes = ['osu', 'taiko', 'fruits', 'mania']
+        self.options = {'user_info': [{'opt': 'r', 'opt_value': 'recent', 'opt_type': None, 'default': False},
+                                      {'opt': 'b', 'opt_value': 'beatmaps', 'opt_type': str, 'default': None},
+                                      {'opt': 'mp', 'opt_value': 'mostplayed', 'opt_type': None, 'default': False},
+                                      {'opt': 'd', 'opt_value': 'detailed', 'opt_type': None, 'default': False}],
+                        'user_recent': [{'opt': 'b', 'opt_value': 'best', 'opt_type': None, 'default': False},
+                                        {'opt': 'ps', 'opt_value': 'pass', 'opt_type': None, 'default': False},
+                                        {'opt': 'i', 'opt_value': 'index', 'opt_type': int, 'default': None},
+                                        {'opt': 'p', 'opt_value': 'page', 'opt_type': int, 'default': None},
+                                        {'opt': '?', 'opt_value': 'search', 'opt_type': str, 'default': None},
+                                        {'opt': 'l', 'opt_value': 'list', 'opt_type': None, 'default': False}]
+                        }
+
+    async def test(self, options: CommandObject):
+        import io
+        username = options.args
+        user = await self.osuAPI.get_user(username)
+        plot = await drawing.plot_profile(user)
+        img_byte_arr = io.BytesIO()
+        plot.save(img_byte_arr, format='PNG')
+        img_byte_arr = img_byte_arr.getvalue()
+        return {'photo': BufferedInputFile(img_byte_arr, filename='plot.png'), 'answer': ''}
+
+    async def process_user_inputs(self, telegram_user, args, options_type):
+        try:
+            inputs = re.findall(r'\".+?\"|\S+', args)
+        except TypeError:
+            inputs = []
+
+        db_user = await self.user_db.get_user(telegram_user.id)
+        try:
+            db_user = {  # fuck tuples
+                'telegram_user_id': db_user[0],
+                'username': db_user[1],
+                'user_id': db_user[2],
+                'gamemode': db_user[3]
+            }
+        except KeyError:
+            pass
+
+        try:
+            username_options, option_gamemode = await self._gamemode_option_parser(inputs)
+            usernames, options = await self._option_parser(username_options, self.options[options_type])
+        except TypeError:
+            return 'Please check your inputs for errors!'
+
+        if not usernames:
+            try:
+                username_fin = db_user['username']
+            except KeyError:
+                return 'No players found'
+        else:
+            username_fin = list(set(usernames))[0].replace('"', '')
+
+        try:
+            gamemode = db_user['gamemode']
+        except KeyError:
+            gamemode = None
+        if option_gamemode:
+            gamemode = option_gamemode
+
+        return username_fin, gamemode, options
+
+    @staticmethod
+    async def _gamemode_option_parser(inputs):
+        option_parser = OptionParser()
+        option_parser.add_option('std', 'osu', opt_type=None, default=False)
+        option_parser.add_option('osu', 'osu', opt_type=None, default=False)
+        option_parser.add_option('taiko', 'taiko', opt_type=None, default=False)
+        option_parser.add_option('ctb', 'fruits', opt_type=None, default=False)
+        option_parser.add_option('mania', 'mania', opt_type=None, default=False)
+        outputs, gamemodes = option_parser.parse(inputs)
+
+        final_gamemode = None
+        for gamemode in gamemodes:
+            if gamemodes[gamemode]:
+                final_gamemode = str(gamemode)
+
+        return outputs, final_gamemode
+
+    @staticmethod
+    async def _option_parser(inputs, options):
+        option_parser = OptionParser()
+        for option in options:
+            option_parser.add_option(option['opt'], option['opt_value'], option['opt_type'], option['default'])
+        return option_parser.parse(inputs)
+
+
+class OsuInfo(Osu):
+    def __init__(self):
+        super().__init__()
         self.recent_event_types_dict = {
             'achievement': osu_utils.process_user_info_recent_achievement,
             'rank': osu_utils.process_user_info_recent_rank,
@@ -43,17 +132,12 @@ class Osu:
             'userSupportAgain': osu_utils.process_user_info_recent_userSupport,
             'usernameChange': osu_utils.process_user_info_recent_usernameChange
         }
-        self.options = {'user_info': [{'opt': 'r', 'opt_value': 'recent', 'opt_type': None, 'default': False},
-                                      {'opt': 'b', 'opt_value': 'beatmaps', 'opt_type': str, 'default': None},
-                                      {'opt': 'mp', 'opt_value': 'mostplayed', 'opt_type': None, 'default': False},
-                                      {'opt': 'd', 'opt_value': 'detailed', 'opt_type': None, 'default': False}],
-                        'user_recent': [{'opt': 'b', 'opt_value': 'best', 'opt_type': None, 'default': False},
-                                        {'opt': 'ps', 'opt_value': 'pass', 'opt_type': None, 'default': False},
-                                        {'opt': 'i', 'opt_value': 'index', 'opt_type': int, 'default': None},
-                                        {'opt': 'p', 'opt_value': 'page', 'opt_type': int, 'default': None},
-                                        {'opt': '?', 'opt_value': 'search', 'opt_type': str, 'default': None},
-                                        {'opt': 'l', 'opt_value': 'list', 'opt_type': None, 'default': False}]
-                        }
+        self.extra_info_dict = {'previous_usernames': '▸ <b>Previously known as:</b> {}\n',
+                                'playstyle': '▸ <b>Playstyle:</b> {}\n',
+                                'follower_count': '▸ <b>Followers:</b> {}\n',
+                                'ranked_and_approved_beatmapset_count': '▸ <b>Ranked/Approved Beatmaps:</b> {}\n',
+                                'replays_watched_by_others': '▸ <b>Replays Watched By Others:</b> {}\n'
+                                }
 
     async def process_set_user(self, message: Message, command: CommandObject):
         user = message.from_user
@@ -83,18 +167,154 @@ class Osu:
 
         if not await self.user_db.check_user_exists(user.id):
             await self.user_db.create_new_user(user, osu_user)
-            return {'answer': f'{user.first_name}, your account has been linked to `{osu_user["username"]}`.',
-                    }
+            answer_type = 'linked'
         else:
             user_update = {
                 'user_id': osu_user['id'],
                 'username': osu_user['username']
             }
             await self.user_db.update_user(user.id, user_update)
-            return {'answer': f'{user.first_name}, your username has been edited to `{osu_user["username"]}`.',
-                    }
+            answer_type = 'edited'
+        return {'answer': f'{user.first_name}, your username has been {answer_type} to `{osu_user["username"]}`.'}
 
-    # get user's recent score
+    async def process_user_info(self, message: Message, opt: CommandObject, gamemode):
+        processed_options = await self.process_user_inputs(message.from_user, opt.args, 'user_info')
+        try:
+            username, option_gamemode, options = processed_options
+        except ValueError:
+            return {'answer': processed_options, }
+
+        gamemode = option_gamemode if option_gamemode else gamemode
+        user_info = await self.osuAPI.get_user(username, gamemode)
+        try:
+            user_info['error']
+            return {'answer': f'{username} was not found', 'parse_mode': ParseMode.HTML,
+                    }
+        except KeyError:
+            pass
+
+        if options['recent']:
+            return await self.user_info_recent_answer(user_info, gamemode)
+
+        if options['beatmaps']:
+            bmp_type = options['beatmaps']
+            return
+
+        if options['mostplayed']:
+            return
+
+        if options['detailed']:
+            return await self.user_info_answer(user_info, gamemode, detailed=True)
+
+        return await self.user_info_answer(user_info, gamemode)
+
+    async def user_info_answer(self, user, gamemode, **kwargs):
+        answer = ''
+        header_temp = f'{flag(user["country_code"])} {osu_utils.beautify_mode_text(gamemode)} Profile for {user["username"]}\n'
+        header = hlink(header_temp, await self.osuAPI.get_user_url(user['id']))
+
+        text = ''
+        rank = f'#{user["statistics"]["global_rank"]}' if user['statistics']['global_rank'] else '-'
+        country_rank = f"#{user['statistics']['country_rank']}" if user['statistics']['country_rank'] else ''
+        text_rank = f"▸ <b>Bancho Rank:</b> {rank} ({user['country_code']}{country_rank})\n"
+        text += text_rank
+
+        peak_rank_date = await other_utils.format_date(user['rank_highest']['updated_at'][:-1])
+        text_peak_rank = f"▸ <b>Peak Rank:</b> #{user['rank_highest']['rank']} achived {peak_rank_date}\n"
+        text += text_peak_rank
+
+        text_level = f"▸ <b>Level:</b> {user['statistics']['level']['current']} + {user['statistics']['level']['progress']}%\n"
+        text += text_level
+
+        text_pp_accuracy = f"▸ <b>PP:</b> {user['statistics']['pp']:0.2f} <b>Acc:</b> {user['statistics']['hit_accuracy']:0.2f}%\n"
+        text += text_pp_accuracy
+
+        text_playcount = f"▸ <b>Playcount:</b> {user['statistics']['play_count']} ({round(user['statistics']['play_time'] / 3600)} hrs)\n"
+        text += text_playcount
+
+        grades = user['statistics']['grade_counts']
+        text_grades = f"▸ <b>Ranks:</b> SSH: {grades['ssh']} SS: {grades['ss']} SH: {grades['sh']} S: {grades['s']} A: {grades['a']}\n"
+        text += text_grades
+
+        footer = ''
+        footer += emoji.emojize(':green_circle:') if user['is_online'] else emoji.emojize(':red_circle:')
+
+        if not footer and user['last_visit']:
+            visit_delta = await other_utils.format_date(user['last_visit'])
+            footer += f' Last Seen {visit_delta}'
+        footer += ' On osu! Bancho Server'
+
+        if 'detailed' in kwargs:
+            recent_list = await self.osuAPI.get_user_recent_activity(user['id'])
+            if recent_list:
+                text_recent = '<b>Recent events</b>\n'
+                for recent_event in recent_list[:3]:
+                    date = await other_utils.format_date(recent_event['created_at'][:-6])
+                    text_recent += await self.recent_event_types_dict[recent_event['type']](recent_event, date)
+                text += text_recent
+
+            text_extra_info = ''
+            for extra_info_value, extra_info_item in self.extra_info_dict.items():
+                try:
+                    if user[extra_info_value]:
+                        try:
+                            text_extra_info += extra_info_item.format(", ".join(user[extra_info_value]))
+                        except TypeError:
+                            text_extra_info += extra_info_item.format(user[extra_info_value])
+                except KeyError:
+                    pass
+
+            if text_extra_info:
+                text += '<b>Extra Info</b>\n'
+                text += text_extra_info
+
+            plot = await drawing.plot_profile(user)
+            img_byte_arr = io.BytesIO()
+            plot.save(img_byte_arr, format='PNG')
+            img_byte_arr = img_byte_arr.getvalue()
+            answer += header
+            answer += text
+            answer += footer
+            return {'answer': answer, 'photo': BufferedInputFile(img_byte_arr, filename='plot.png')}
+
+        answer += header
+        answer += text
+        answer += footer
+        return {'answer': answer}
+
+    async def user_info_recent_answer(self, user, gamemode):
+        recent_list = await self.osuAPI.get_user_recent_activity(user['id'])
+        answer = ''
+
+        rank = f'#{user["statistics"]["global_rank"]}' if user['statistics']['global_rank'] else '-'
+        country_rank = f"#{user['statistics']['country_rank']}" if user['statistics']['country_rank'] else ''
+        header_temp = (f'{flag(user["country_code"])} Recent {osu_utils.beautify_mode_text(gamemode)} Activity for '
+                       f'{user["username"]} [{rank} | {user["country_code"]}{country_rank}]\n')
+        header = hlink(header_temp, await self.osuAPI.get_user_url(user['id']))
+
+        text = ''
+        for recent_info in recent_list[:10]:
+            date = await other_utils.format_date(recent_info['created_at'][:-6])
+            text += await self.recent_event_types_dict[recent_info['type']](recent_info, date)
+
+        footer = ''
+        footer += emoji.emojize(':green_circle:') if user['is_online'] else emoji.emojize(':red_circle:')
+
+        if not footer and user['last_visit']:
+            visit_delta = await other_utils.format_date(user['last_visit'])
+            footer += f' Last Seen {visit_delta}'
+        footer += ' On osu! Bancho Server'
+
+        answer += header
+        answer += text
+        answer += footer
+        return {'answer': answer, 'disable_web_page_preview': True}
+
+
+class OsuScores(Osu):
+    def __init__(self):
+        super().__init__()
+
     async def process_user_recent(self, message: Message, opt: CommandObject):
         processed_options = await self.process_user_inputs(message.from_user, opt.args, 'user_recent')
         try:
@@ -220,218 +440,3 @@ class Osu:
         answer += footer
         return {'answer': answer, 'parse_mode': ParseMode.HTML,
                 'disable_web_page_preview': True}  # ,'keyboard': pagination_kb.get_pagination_kb(data=data)
-
-    async def process_user_info(self, message: Message, opt: CommandObject, gamemode):
-        processed_options = await self.process_user_inputs(message.from_user, opt.args, 'user_info')
-        try:
-            username, option_gamemode, options = processed_options
-        except ValueError:
-            return {'answer': processed_options, }
-
-        gamemode = option_gamemode if option_gamemode else gamemode
-        user_info = await self.osuAPI.get_user(username, gamemode)
-        try:
-            user_info['error']
-            return {'answer': f'{username} was not found', 'parse_mode': ParseMode.HTML,
-                    }
-        except KeyError:
-            pass
-
-        if options['recent']:
-            return await self.user_info_recent_answer(user_info, gamemode)
-
-        if options['beatmaps']:
-            bmp_type = options['beatmaps']
-            return
-
-        if options['mostplayed']:
-            return
-
-        if options['detailed']:
-            return await self.user_info_answer(user_info, gamemode, detailed=True)
-
-        return await self.user_info_answer(user_info, gamemode)
-
-    async def user_info_answer(self, user, gamemode, **kwargs):
-        answer = ''
-        header_temp = f'{flag(user["country_code"])} {osu_utils.beautify_mode_text(gamemode)} Profile for {user["username"]}\n'
-        header = hlink(header_temp, await self.osuAPI.get_user_url(user['id']))
-
-        text = ''
-        rank = f'#{user["statistics"]["global_rank"]}' if user['statistics']['global_rank'] else '-'
-        country_rank = f"#{user['statistics']['country_rank']}" if user['statistics']['country_rank'] else ''
-        text_rank = f"▸ <b>Bancho Rank:</b> {rank} ({user['country_code']}{country_rank})\n"
-        text += text_rank
-
-        peak_rank_date = await other_utils.format_date(user['rank_highest']['updated_at'][:-1])
-        text_peak_rank = f"▸ <b>Peak Rank:</b> #{user['rank_highest']['rank']} achived {peak_rank_date}\n"
-        text += text_peak_rank
-
-        text_level = f"▸ <b>Level:</b> {user['statistics']['level']['current']} + {user['statistics']['level']['progress']}%\n"
-        text += text_level
-
-        text_pp_accuracy = f"▸ <b>PP:</b> {user['statistics']['pp']:0.2f} <b>Acc:</b> {user['statistics']['hit_accuracy']:0.2f}%\n"
-        text += text_pp_accuracy
-
-        text_playcount = f"▸ <b>Playcount:</b> {user['statistics']['play_count']} ({round(user['statistics']['play_time'] / 3600)} hrs)\n"
-        text += text_playcount
-
-        grades = user['statistics']['grade_counts']
-        text_grades = f"▸ <b>Ranks:</b> SSH: {grades['ssh']} SS: {grades['ss']} SH: {grades['sh']} S: {grades['s']} A: {grades['a']}\n"
-        text += text_grades
-
-        footer = ''
-        footer += emoji.emojize(':green_circle:') if user['is_online'] else emoji.emojize(':red_circle:')
-
-        if not footer and user['last_visit']:
-            visit_delta = await other_utils.format_date(user['last_visit'])
-            footer += f' Last Seen {visit_delta}'
-        footer += ' On osu! Bancho Server'
-
-        if 'detailed' in kwargs:
-            recent_list = await self.osuAPI.get_user_recent_activity(user['id'])
-            if recent_list:
-                text_recent = '<b>Recent events</b>\n'
-                for recent_event in recent_list[:3]:
-                    date = await other_utils.format_date(recent_event['created_at'][:-6])
-                    text_recent += await self.recent_event_types_dict[recent_event['type']](recent_event, date)
-                text += text_recent
-
-            extra_info_dict = {'previous_usernames': '▸ <b>Previously known as:</b> {}\n',
-                               'playstyle': '▸ <b>Playstyle:</b> {}\n',
-                               'follower_count': '▸ <b>Followers:</b> {}\n',
-                               'ranked_and_approved_beatmapset_count': '▸ <b>Ranked/Approved Beatmaps:</b> {}\n',
-                               'replays_watched_by_others': '▸ <b>Replays Watched By Others:</b> {}\n'}
-            text_extra_info = ''
-            for extra_info_value, extra_info_item in extra_info_dict.items():
-                try:
-                    if user[extra_info_value]:
-                        try:
-                            text_extra_info += extra_info_item.format(", ".join(user[extra_info_value]))
-                        except TypeError:
-                            text_extra_info += extra_info_item.format(user[extra_info_value])
-                except KeyError:
-                    pass
-
-            if text_extra_info:
-                text += '<b>Extra Info</b>\n'
-                text += text_extra_info
-
-            plot = await drawing.plot_profile(user)
-            img_byte_arr = io.BytesIO()
-            plot.save(img_byte_arr, format='PNG')
-            img_byte_arr = img_byte_arr.getvalue()
-            answer += header
-            answer += text
-            answer += footer
-            return {'answer': answer, 'photo': BufferedInputFile(img_byte_arr, filename='plot.png')}
-
-        answer += header
-        answer += text
-        answer += footer
-        return {'answer': answer}
-
-    async def user_info_recent_answer(self, user, gamemode):
-        recent_list = await self.osuAPI.get_user_recent_activity(user['id'])
-        answer = ''
-
-        rank = f'#{user["statistics"]["global_rank"]}' if user['statistics']['global_rank'] else '-'
-        country_rank = f"#{user['statistics']['country_rank']}" if user['statistics']['country_rank'] else ''
-        header_temp = (f'{flag(user["country_code"])} Recent {osu_utils.beautify_mode_text(gamemode)} Activity for '
-                       f'{user["username"]} [{rank} | {user["country_code"]}{country_rank}]\n')
-        header = hlink(header_temp, await self.osuAPI.get_user_url(user['id']))
-
-        text = ''
-        for recent_info in recent_list[:10]:
-            date = await other_utils.format_date(recent_info['created_at'][:-6])
-            text += await self.recent_event_types_dict[recent_info['type']](recent_info, date)
-
-        footer = ''
-        footer += emoji.emojize(':green_circle:') if user['is_online'] else emoji.emojize(':red_circle:')
-
-        if not footer and user['last_visit']:
-            visit_delta = await other_utils.format_date(user['last_visit'])
-            footer += f' Last Seen {visit_delta}'
-        footer += ' On osu! Bancho Server'
-
-        answer += header
-        answer += text
-        answer += footer
-        return {'answer': answer, 'disable_web_page_preview': True}
-
-    async def user_info_most_played(self):
-        return {'answer': None, }
-
-    async def test(self, message: Message, options: CommandObject):
-        import io
-        username = options.args
-        user = await self.osuAPI.get_user(username)
-        plot = await drawing.plot_profile(user)
-        img_byte_arr = io.BytesIO()
-        plot.save(img_byte_arr, format='PNG')
-        img_byte_arr = img_byte_arr.getvalue()
-        return {'photo': BufferedInputFile(img_byte_arr, filename='plot.png'), 'answer': ''}
-
-    async def process_user_inputs(self, telegram_user, args, options_type):
-        try:
-            inputs = re.findall(r'\".+?\"|\S+', args)
-        except TypeError:
-            inputs = []
-
-        db_user = await self.user_db.get_user(telegram_user.id)
-        try:
-            db_user = {  # fuck tuples
-                'telegram_user_id': db_user[0],
-                'username': db_user[1],
-                'user_id': db_user[2],
-                'gamemode': db_user[3]
-            }
-        except KeyError:
-            pass
-
-        try:
-            username_options, option_gamemode = self._gamemode_option_parser(inputs)
-            usernames, options = self._option_parser(username_options, self.options[options_type])
-        except TypeError:
-            return 'Please check your inputs for errors!'
-
-        if not usernames:
-            try:
-                username_fin = db_user['username']
-            except KeyError:
-                return 'No players found'
-        else:
-            username_fin = list(set(usernames))[0].replace('"', '')
-
-        try:
-            gamemode = db_user['gamemode']
-        except KeyError:
-            gamemode = None
-        if option_gamemode:
-            gamemode = option_gamemode
-
-        return username_fin, gamemode, options
-
-    @staticmethod
-    def _gamemode_option_parser(inputs):
-        option_parser = OptionParser()
-        option_parser.add_option('std', 'osu', opt_type=None, default=False)
-        option_parser.add_option('osu', 'osu', opt_type=None, default=False)
-        option_parser.add_option('taiko', 'taiko', opt_type=None, default=False)
-        option_parser.add_option('ctb', 'fruits', opt_type=None, default=False)
-        option_parser.add_option('mania', 'mania', opt_type=None, default=False)
-        outputs, gamemodes = option_parser.parse(inputs)
-
-        final_gamemode = None
-        for gamemode in gamemodes:
-            if gamemodes[gamemode]:
-                final_gamemode = str(gamemode)
-
-        return outputs, final_gamemode
-
-    @staticmethod
-    def _option_parser(inputs, options):
-        option_parser = OptionParser()
-        for option in options:
-            option_parser.add_option(option['opt'], option['opt_value'], option['opt_type'], option['default'])
-        return option_parser.parse(inputs)

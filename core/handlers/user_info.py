@@ -3,10 +3,11 @@ from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandObject
 from aiogram import types
 
-from core.osu.osu import Osu
+from core.osu.osu import OsuInfo
 
+
+osu = OsuInfo()
 router = Router()
-osu = Osu()
 
 
 @router.message(Command("link", prefix=">"))

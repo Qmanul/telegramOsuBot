@@ -7,7 +7,7 @@ from core.osu import osu_utils
 from core.osu.osu import Osu
 
 
-class OsuScore(Osu):
+class OsuScores(Osu):
     def __init__(self):
         super().__init__()
 

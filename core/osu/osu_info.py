@@ -1,5 +1,4 @@
 import asyncio
-import io
 import emoji
 from aiogram.enums import ParseMode
 from aiogram.types import BufferedInputFile
@@ -162,9 +161,10 @@ class OsuInfo(Osu):
                 text += text_extra_info
 
             plot = await drawing.plot_profile(user)
-            img_byte_arr = io.BytesIO()
-            plot.save(img_byte_arr, format='PNG')
-            img_byte_arr = img_byte_arr.getvalue()
+            plot.save(self.bytes_buffer, format='PNG')
+            self.bytes_buffer.seek(0)
+            img_byte_arr = self.bytes_buffer.getvalue()
+            self.bytes_buffer.truncate(0)
             answer += header
             answer += text
             answer += footer
@@ -202,3 +202,6 @@ class OsuInfo(Osu):
         answer += text
         answer += footer
         return {'answer': answer, 'disable_web_page_preview': True}
+
+    async def user_info_most_played_answer(self, user, gamemode):
+        return

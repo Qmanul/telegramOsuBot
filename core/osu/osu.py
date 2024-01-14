@@ -1,3 +1,4 @@
+import io
 import re
 
 from aiogram.filters import CommandObject
@@ -30,6 +31,7 @@ class Osu:
                                         {'opt': '?', 'opt_value': 'search', 'opt_type': str, 'default': None},
                                         {'opt': 'l', 'opt_value': 'list', 'opt_type': None, 'default': False}]
                         }
+        self.bytes_buffer = io.BytesIO()
 
     async def test(self, options: CommandObject):
         import io

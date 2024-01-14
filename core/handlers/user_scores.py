@@ -3,11 +3,11 @@ from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandObject
 from aiogram import types
 
-from core.osu.osu_score import OsuScore
+from core.osu.osu_scores import OsuScores
 
 
 router = Router()
-osu = OsuScore()
+osu = OsuScores()
 
 
 @router.message(Command("recent", "rs", prefix=">"))

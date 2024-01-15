@@ -208,6 +208,7 @@ class OsuInfo(Osu):
         answer += footer
         return {'answer': answer, 'disable_web_page_preview': True}
 
+    #TODO сделать универсальный метод для карт и зашить в него этот
     async def user_info_most_played_answer(self, user_info, page):
         bmp_list = await self.osuAPI.get_user_beatmaps(user_info['id'], 'most_played')
         answer = ''

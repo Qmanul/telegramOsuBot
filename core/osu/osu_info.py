@@ -22,19 +22,18 @@ class OsuInfo(Osu):
                         {'opt': 'p', 'opt_value': 'page', 'opt_type': int, 'default': None},
                         {'opt': 'mp', 'opt_value': 'most_played', 'opt_type': None, 'default': False},
                         {'opt': 'd', 'opt_value': 'detailed', 'opt_type': None, 'default': False}]
-        self.recent_event_types_dict = {
-            'achievement': osu_utils.process_user_info_recent_achievement,
-            'rank': osu_utils.process_user_info_recent_rank,
-            'rankLost': osu_utils.process_user_info_recent_rank,
-            'beatmapsetApprove': osu_utils.process_user_info_recent_beatmapset,
-            'beatmapsetUpdate': osu_utils.process_user_info_recent_beatmapset,
-            'beatmapsetDelete': osu_utils.process_user_info_recent_beatmapset,
-            'beatmapsetUpload': osu_utils.process_user_info_recent_beatmapset,
-            'beatmapsetRevive': osu_utils.process_user_info_recent_beatmapset,
-            'userSupportFirst': osu_utils.process_user_info_recent_user_support,
-            'userSupportGift': osu_utils.process_user_info_recent_user_support,
-            'userSupportAgain': osu_utils.process_user_info_recent_user_support,
-            'usernameChange': osu_utils.process_user_info_recent_usernameChange}
+        self.recent_event_types_dict = {'achievement': osu_utils.process_user_info_recent_achievement,
+                                        'rank': osu_utils.process_user_info_recent_rank,
+                                        'rankLost': osu_utils.process_user_info_recent_rank,
+                                        'beatmapsetApprove': osu_utils.process_user_info_recent_beatmapset,
+                                        'beatmapsetUpdate': osu_utils.process_user_info_recent_beatmapset,
+                                        'beatmapsetDelete': osu_utils.process_user_info_recent_beatmapset,
+                                        'beatmapsetUpload': osu_utils.process_user_info_recent_beatmapset,
+                                        'beatmapsetRevive': osu_utils.process_user_info_recent_beatmapset,
+                                        'userSupportFirst': osu_utils.process_user_info_recent_user_support,
+                                        'userSupportGift': osu_utils.process_user_info_recent_user_support,
+                                        'userSupportAgain': osu_utils.process_user_info_recent_user_support,
+                                        'usernameChange': osu_utils.process_user_info_recent_usernameChange}
         self.extra_info_dict = {'previous_usernames': '▸ <b>Previously known as:</b> {}\n',
                                 'playstyle': '▸ <b>Playstyle:</b> {}\n',
                                 'follower_count': '▸ <b>Followers:</b> {}\n',
@@ -49,10 +48,8 @@ class OsuInfo(Osu):
         username = args
 
         if username == 'NONE':
-            user_update = {
-                'username': None,
-                'user_id': None
-            }
+            user_update = {'username': None,
+                           'user_id': None}
             await self.user_db.update_user(telegram_user.id, user_update)
             return {'answer': f'{telegram_user.first_name}, your username has been removed.'}
 
@@ -109,7 +106,7 @@ class OsuInfo(Osu):
 
     async def user_info_answer(self, user, gamemode, detailed=False):
         answer = ''
-        header_temp = f'{flag(user["country_code"])} {self.mode_names(gamemode)} Profile for {user["username"]}\n'
+        header_temp = f'{flag(user["country_code"])} {self.mode_names[gamemode]} Profile for {user["username"]}\n'
         header = hlink(header_temp, await self.osuAPI.get_user_url(user['id']))
 
         text = ''
@@ -188,7 +185,7 @@ class OsuInfo(Osu):
 
         rank = f'#{user["statistics"]["global_rank"]}' if user['statistics']['global_rank'] else '-'
         country_rank = f"#{user['statistics']['country_rank']}" if user['statistics']['country_rank'] else ''
-        header_temp = (f'{flag(user["country_code"])} Recent {self.mode_names(gamemode)} Activity for '
+        header_temp = (f'{flag(user["country_code"])} Recent {self.mode_names[gamemode]} Activity for '
                        f'{user["username"]} [{rank} | {user["country_code"]}{country_rank}]\n')
         header = hlink(header_temp, await self.osuAPI.get_user_url(user['id']))
 

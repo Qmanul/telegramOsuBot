@@ -89,12 +89,12 @@ class Osu:
         option_parser.add_option('mania', 'mania', opt_type=None, default=False)
         outputs, gamemodes = option_parser.parse(inputs)
 
-        final_gamemode = None
-        for gamemode in gamemodes:
-            if gamemodes[gamemode]:
-                final_gamemode = str(gamemode)
+        if any(gamemodes.values()):
+            gamemode_fin = filter(lambda gamemode:gamemodes[gamemode], gamemodes).__next__()
+        else:
+            gamemode_fin = None
 
-        return outputs, final_gamemode
+        return outputs, gamemode_fin
 
     @staticmethod
     async def _option_parser(inputs, options):

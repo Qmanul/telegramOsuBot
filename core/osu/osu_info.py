@@ -73,7 +73,8 @@ class OsuInfo(Osu):
             }
             await self.user_db.update_user(telegram_user.id, user_update)
             answer_type = 'edited'
-        return {'answer': f'{telegram_user.first_name}, your username has been {answer_type} to `{osu_user["username"]}`.'}
+        return {
+            'answer': f'{telegram_user.first_name}, your username has been {answer_type} to `{osu_user["username"]}`.'}
 
     async def process_user_info(self, telegra_user, args, gamemode):
         processed_options = await self.process_user_inputs(telegra_user, args, 'user_info')
@@ -206,7 +207,7 @@ class OsuInfo(Osu):
         answer += footer
         return {'answer': answer, 'disable_web_page_preview': True}
 
-    #TODO сделать универсальный метод для карт и зашить в него этот
+    # TODO сделать универсальный метод для карт и зашить в него этот
     async def user_info_most_played_answer(self, user_info, page):
         bmp_list = await self.osuAPI.get_user_beatmaps(user_info['id'], 'most_played')
         answer = ''

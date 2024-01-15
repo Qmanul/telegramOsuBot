@@ -23,4 +23,4 @@ async def cmd_recent(message: types.Message, command: CommandObject):
 @router.message(Command("test", prefix=">"))
 async def cmt_test(message: types.Message, command: CommandObject):
     answer = await osu.test(command)
-    await message.answer(answer['answer'], parse_mode=ParseMode.HTML)
+    await message.answer(answer['answer'])

@@ -22,7 +22,11 @@ async def cmd_set_user(message: types.Message, command: CommandObject):
     try:
         await message.answer_photo(photo=answer['photo'], caption=answer['answer'], parse_mode=ParseMode.HTML)
     except KeyError:
-        await message.answer(answer['answer'], parse_mode=ParseMode.HTML)
+        try:
+            await message.answer(answer['answer'], parse_mode=ParseMode.HTML,
+                                 disable_web_page_preview=answer['disable_web_page_preview'])
+        except KeyError:
+            await message.answer(answer['answer'], parse_mode=ParseMode.HTML)
 
 
 @router.message(Command("taiko", prefix=">"))
@@ -31,7 +35,11 @@ async def cmd_set_user(message: types.Message, command: CommandObject):
     try:
         await message.answer_photo(photo=answer['photo'], caption=answer['answer'], parse_mode=ParseMode.HTML)
     except KeyError:
-        await message.answer(answer['answer'], parse_mode=ParseMode.HTML)
+        try:
+            await message.answer(answer['answer'], parse_mode=ParseMode.HTML,
+                                 disable_web_page_preview=answer['disable_web_page_preview'])
+        except KeyError:
+            await message.answer(answer['answer'], parse_mode=ParseMode.HTML)
 
 
 @router.message(Command("ctb", 'fruits', prefix=">"))
@@ -40,7 +48,11 @@ async def cmd_set_user(message: types.Message, command: CommandObject):
     try:
         await message.answer_photo(photo=answer['photo'], caption=answer['answer'], parse_mode=ParseMode.HTML)
     except KeyError:
-        await message.answer(answer['answer'], parse_mode=ParseMode.HTML)
+        try:
+            await message.answer(answer['answer'], parse_mode=ParseMode.HTML,
+                                 disable_web_page_preview=answer['disable_web_page_preview'])
+        except KeyError:
+            await message.answer(answer['answer'], parse_mode=ParseMode.HTML)
 
 
 @router.message(Command("mania", "piano", prefix=">"))
@@ -49,4 +61,8 @@ async def cmd_set_user(message: types.Message, command: CommandObject):
     try:
         await message.answer_photo(photo=answer['photo'], caption=answer['answer'], parse_mode=ParseMode.HTML)
     except KeyError:
-        await message.answer(answer['answer'], parse_mode=ParseMode.HTML)
+        try:
+            await message.answer(answer['answer'], parse_mode=ParseMode.HTML,
+                                 disable_web_page_preview=answer['disable_web_page_preview'])
+        except KeyError:
+            await message.answer(answer['answer'], parse_mode=ParseMode.HTML)

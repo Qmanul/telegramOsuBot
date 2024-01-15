@@ -1,6 +1,9 @@
 import asyncio
+import io
+from itertools import islice
+from math import ceil
+
 import emoji
-from aiogram.enums import ParseMode
 from aiogram.types import BufferedInputFile
 from aiogram.utils.markdown import hlink
 from flag import flag
@@ -33,6 +36,8 @@ class OsuInfo(Osu):
                                 'ranked_and_approved_beatmapset_count': '▸ <b>Ranked/Approved Beatmaps:</b> {}\n',
                                 'replays_watched_by_others': '▸ <b>Replays Watched By Others:</b> {}\n'
                                 }
+        self.bytes_buffer = io.BytesIO()
+        self.items_per_page = 20
 
     async def process_set_user(self, telegram_user, args):
         if args is None:
@@ -45,7 +50,7 @@ class OsuInfo(Osu):
                 'user_id': None
             }
             await self.user_db.update_user(telegram_user.id, user_update)
-            return {'answer': f'{telegram_user.first_name}, your username has been removed.', 'parse_mode': ParseMode.HTML}
+            return {'answer': f'{telegram_user.first_name}, your username has been removed.'}
 
         osu_user = None
 
@@ -81,7 +86,7 @@ class OsuInfo(Osu):
         user_info = await self.osuAPI.get_user(username, gamemode)
         try:
             user_info['error']
-            return {'answer': f'{username} was not found', 'parse_mode': ParseMode.HTML}
+            return {'answer': f'{username} was not found'}
         except KeyError:
             pass
 
@@ -93,7 +98,7 @@ class OsuInfo(Osu):
             return
 
         if options['mostplayed']:
-            return
+            return await self.user_info_most_played_answer(user_info, options['page'])
 
         if options['detailed']:
             return await self.user_info_answer(user_info, gamemode, detailed=True)
@@ -203,5 +208,26 @@ class OsuInfo(Osu):
         answer += footer
         return {'answer': answer, 'disable_web_page_preview': True}
 
-    async def user_info_most_played_answer(self, user, gamemode):
-        return
+    async def user_info_most_played_answer(self, user_info, page):
+        bmp_list = await self.osuAPI.get_user_beatmaps(user_info['id'], 'most_played')
+        answer = ''
+        header = f'{flag(user_info["country_code"])} Most played beatmaps for Qmanul {user_info["username"]}:\n'
+        answer += header
+        max_page = ceil(len(bmp_list) / self.items_per_page)
+        try:
+            page = self.items_per_page * (page - 1)
+        except TypeError:
+            page = 0
+
+        if page // self.items_per_page > max_page:
+            return {'answer': f'{user_info["username"]} has no recent plays with those options.'}
+
+        for bmp in islice(bmp_list, page, page + min(len(bmp_list) - page, self.items_per_page)):
+            temp_title = f'{bmp["beatmapset"]["artist"][:18]} - {bmp["beatmapset"]["title"][:18]} [{bmp["beatmap"]["version"][:18]}] '
+            title = hlink(temp_title, f'https://osu.ppy.sh/b/{bmp["beatmap_id"]}')
+            playcount = f'▶{bmp["count"]}\n'
+            answer += title + playcount
+
+        footer = f'On osu! Bancho Server | Page {page // self.items_per_page + 1} of {max_page}'
+        answer += footer
+        return {'answer': answer, 'disable_web_page_preview': True}

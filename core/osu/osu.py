@@ -1,6 +1,4 @@
-import io
 import re
-
 from aiogram.filters import CommandObject
 from aiogram.types import BufferedInputFile
 
@@ -22,6 +20,7 @@ class Osu:
         self.gamemodes = ['osu', 'taiko', 'fruits', 'mania']
         self.options = {'user_info': [{'opt': 'r', 'opt_value': 'recent', 'opt_type': None, 'default': False},
                                       {'opt': 'b', 'opt_value': 'beatmaps', 'opt_type': str, 'default': None},
+                                      {'opt': 'p', 'opt_value': 'page', 'opt_type': int, 'default': None},
                                       {'opt': 'mp', 'opt_value': 'mostplayed', 'opt_type': None, 'default': False},
                                       {'opt': 'd', 'opt_value': 'detailed', 'opt_type': None, 'default': False}],
                         'user_recent': [{'opt': 'b', 'opt_value': 'best', 'opt_type': None, 'default': False},
@@ -31,17 +30,13 @@ class Osu:
                                         {'opt': '?', 'opt_value': 'search', 'opt_type': str, 'default': None},
                                         {'opt': 'l', 'opt_value': 'list', 'opt_type': None, 'default': False}]
                         }
-        self.bytes_buffer = io.BytesIO()
 
     async def test(self, options: CommandObject):
-        import io
         username = options.args
         user = await self.osuAPI.get_user(username)
-        plot = await drawing.plot_profile(user)
-        img_byte_arr = io.BytesIO()
-        plot.save(img_byte_arr, format='PNG')
-        img_byte_arr = img_byte_arr.getvalue()
-        return {'photo': BufferedInputFile(img_byte_arr, filename='plot.png'), 'answer': ''}
+        response = await self.osuAPI.get_user_beatmaps(user['id'], bmp_type='most_played')
+        print(response)
+        return {'answer': '1'}
 
     async def process_user_inputs(self, telegram_user, args, options_type):
         try:

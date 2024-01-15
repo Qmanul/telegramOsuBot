@@ -1,6 +1,5 @@
 from itertools import islice
 from math import ceil
-from aiogram.enums import ParseMode
 from flag import flag
 
 from core.osu import osu_utils
@@ -10,6 +9,7 @@ from core.osu.osu import Osu
 class OsuScores(Osu):
     def __init__(self):
         super().__init__()
+        self.items_per_page = 5
 
     async def process_user_recent(self, telegram_user, args):
         processed_options = await self.process_user_inputs(telegram_user, args, 'user_recent')
@@ -27,8 +27,7 @@ class OsuScores(Osu):
         user_info = await self.osuAPI.get_user(username, gamemode)
         try:
             user_info['error']
-            return {'answer': f'{username} was not found', 'parse_mode': ParseMode.HTML,
-                    }
+            return {'answer': f'{username} was not found'}
         except KeyError:
             pass
 
@@ -116,18 +115,17 @@ class OsuScores(Osu):
         return {'answer': answer, }
 
     async def recent_answer_list(self, user_info, play_list: list, gamemode, page):
-
         answer = ''
         header = f'{flag(user_info["country_code"])} Recent {osu_utils.beautify_mode_text(gamemode)} Plays for {user_info["username"]}:\n'
         answer += header
-        max_page = ceil(len(play_list) / 5)
+        max_page = ceil(len(play_list) / self.items_per_page)
         if page > max_page:
             return {
                 'answer': f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)} with those options.',
             }
-        page = 5 * page
+        page = self.items_per_page * page
 
-        for play_info in islice(play_list, page, page + min(len(play_list) - page, 5)):
+        for play_info in islice(play_list, page, page + min(len(play_list) - page, self.items_per_page)):
             beatmap = await self.osuAPI.get_beatmap(play_info['beatmap']['id'])
             filepath = await self.osuAPI.download_beatmap(beatmap_info=beatmap, api='nerinyan')
             title, text, score_date = await osu_utils.create_play_info(play_info, beatmap, filepath)
@@ -137,7 +135,6 @@ class OsuScores(Osu):
             answer += text
             answer += f'▸ Score Set {score_date}\n'
 
-        footer = f'On osu! Bancho Server | Page {page // 5 + 1} of {max_page}'
+        footer = f'On osu! Bancho Server | Page {page // self.items_per_page + 1} of {max_page}'
         answer += footer
-        return {'answer': answer, 'parse_mode': ParseMode.HTML,
-                'disable_web_page_preview': True}  # ,'keyboard': pagination_kb.get_pagination_kb(data=data)
+        return {'answer': answer, 'disable_web_page_preview': True}  # ,'keyboard': pagination_kb.get_pagination_kb(data=data)

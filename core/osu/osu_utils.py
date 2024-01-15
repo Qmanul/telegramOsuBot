@@ -135,7 +135,7 @@ async def process_user_info_recent_beatmapset(recent_info: dict, date):
     return f'▸ {recent_type} beatmapset {map_link} {date}\n'
 
 
-async def process_user_info_recent_userSupport(recent_info: dict, date):
+async def process_user_info_recent_user_support(recent_info: dict, date):
     if 'first' in recent_info["type"].lower():
         return f'Has bought osu!supporter for the first time {date}\n'
     elif 'gift' in recent_info["type"].lower():

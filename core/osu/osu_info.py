@@ -30,9 +30,9 @@ class OsuInfo(Osu):
             'beatmapsetDelete': osu_utils.process_user_info_recent_beatmapset,
             'beatmapsetUpload': osu_utils.process_user_info_recent_beatmapset,
             'beatmapsetRevive': osu_utils.process_user_info_recent_beatmapset,
-            'userSupportFirst': osu_utils.process_user_info_recent_userSupport,
-            'userSupportGift': osu_utils.process_user_info_recent_userSupport,
-            'userSupportAgain': osu_utils.process_user_info_recent_userSupport,
+            'userSupportFirst': osu_utils.process_user_info_recent_user_support,
+            'userSupportGift': osu_utils.process_user_info_recent_user_support,
+            'userSupportAgain': osu_utils.process_user_info_recent_user_support,
             'usernameChange': osu_utils.process_user_info_recent_usernameChange
         }
         self.extra_info_dict = {'previous_usernames': '▸ <b>Previously known as:</b> {}\n',

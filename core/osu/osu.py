@@ -18,18 +18,6 @@ class Osu:
         self.nerinyanAPI = NerinyanAPI()
         self.user_db = UserDatabase()
         self.gamemodes = ['osu', 'taiko', 'fruits', 'mania']
-        self.options = {'user_info': [{'opt': 'r', 'opt_value': 'recent', 'opt_type': None, 'default': False},
-                                      {'opt': 'b', 'opt_value': 'beatmaps', 'opt_type': str, 'default': None},
-                                      {'opt': 'p', 'opt_value': 'page', 'opt_type': int, 'default': None},
-                                      {'opt': 'mp', 'opt_value': 'mostplayed', 'opt_type': None, 'default': False},
-                                      {'opt': 'd', 'opt_value': 'detailed', 'opt_type': None, 'default': False}],
-                        'user_recent': [{'opt': 'b', 'opt_value': 'best', 'opt_type': None, 'default': False},
-                                        {'opt': 'ps', 'opt_value': 'pass', 'opt_type': None, 'default': False},
-                                        {'opt': 'i', 'opt_value': 'index', 'opt_type': int, 'default': None},
-                                        {'opt': 'p', 'opt_value': 'page', 'opt_type': int, 'default': None},
-                                        {'opt': '?', 'opt_value': 'search', 'opt_type': str, 'default': None},
-                                        {'opt': 'l', 'opt_value': 'list', 'opt_type': None, 'default': False}]
-                        }
 
     async def test(self, options: CommandObject):
         username = options.args
@@ -38,7 +26,7 @@ class Osu:
         print(response)
         return {'answer': '1'}
 
-    async def process_user_inputs(self, telegram_user, args, options_type):
+    async def process_user_inputs(self, telegram_user, args, parse_options):
         try:
             inputs = re.findall(r'\".+?\"|\S+', args)
         except TypeError:
@@ -57,7 +45,7 @@ class Osu:
 
         try:
             username_options, option_gamemode = await self._gamemode_option_parser(inputs)
-            usernames, options = await self._option_parser(username_options, self.options[options_type])
+            usernames, options = await self._option_parser(username_options, parse_options)
         except TypeError:
             return 'Please check your inputs for errors!'
 

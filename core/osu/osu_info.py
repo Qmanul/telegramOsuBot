@@ -16,6 +16,11 @@ from core.utils import other_utils, drawing
 class OsuInfo(Osu):
     def __init__(self):
         super().__init__()
+        self.options = [{'opt': 'r', 'opt_value': 'recent', 'opt_type': None, 'default': False},
+                        {'opt': 'b', 'opt_value': 'beatmaps', 'opt_type': str, 'default': None},
+                        {'opt': 'p', 'opt_value': 'page', 'opt_type': int, 'default': None},
+                        {'opt': 'mp', 'opt_value': 'mostplayed', 'opt_type': None, 'default': False},
+                        {'opt': 'd', 'opt_value': 'detailed', 'opt_type': None, 'default': False}]
         self.recent_event_types_dict = {
             'achievement': osu_utils.process_user_info_recent_achievement,
             'rank': osu_utils.process_user_info_recent_rank,
@@ -77,7 +82,7 @@ class OsuInfo(Osu):
             'answer': f'{telegram_user.first_name}, your username has been {answer_type} to `{osu_user["username"]}`.'}
 
     async def process_user_info(self, telegra_user, args, gamemode):
-        processed_options = await self.process_user_inputs(telegra_user, args, 'user_info')
+        processed_options = await self.process_user_inputs(telegra_user, args, self.options)
         try:
             username, option_gamemode, options, _ = processed_options
         except ValueError:

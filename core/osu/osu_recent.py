@@ -6,13 +6,19 @@ from core.osu import osu_utils
 from core.osu.osu import Osu
 
 
-class OsuScores(Osu):
+class OsuRecent(Osu):
     def __init__(self):
         super().__init__()
+        self.options = [{'opt': 'b', 'opt_value': 'best', 'opt_type': None, 'default': False},
+                        {'opt': 'ps', 'opt_value': 'pass', 'opt_type': None, 'default': False},
+                        {'opt': 'i', 'opt_value': 'index', 'opt_type': int, 'default': None},
+                        {'opt': 'p', 'opt_value': 'page', 'opt_type': int, 'default': None},
+                        {'opt': '?', 'opt_value': 'search', 'opt_type': str, 'default': None},
+                        {'opt': 'l', 'opt_value': 'list', 'opt_type': None, 'default': False}]
         self.items_per_page = 5
 
     async def process_user_recent(self, telegram_user, args):
-        processed_options = await self.process_user_inputs(telegram_user, args, 'user_recent')
+        processed_options = await self.process_user_inputs(telegram_user, args, self.options)
         try:
             username, option_gamemode, options, db_gamemode = processed_options
         except ValueError:
@@ -137,4 +143,5 @@ class OsuScores(Osu):
 
         footer = f'On osu! Bancho Server | Page {page // self.items_per_page + 1} of {max_page}'
         answer += footer
-        return {'answer': answer, 'disable_web_page_preview': True}  # ,'keyboard': pagination_kb.get_pagination_kb(data=data)
+        return {'answer': answer,
+                'disable_web_page_preview': True}  # ,'keyboard': pagination_kb.get_pagination_kb(data=data)

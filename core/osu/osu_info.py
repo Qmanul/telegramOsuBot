@@ -212,6 +212,11 @@ class OsuInfo(Osu):
         answer += footer
         return {'answer': answer, 'disable_web_page_preview': True}
 
+    async def user_info_beatmaps_answer(self, user_info, bmp_type):
+        answer = ''
+
+        return {'answer': answer}
+
     # TODO сделать универсальный метод для карт и зашить в него этот
     async def user_info_most_played_answer(self, user_info, page):
         bmp_list = await self.osuAPI.get_user_beatmaps(user_info['id'], 'most_played')
@@ -228,7 +233,7 @@ class OsuInfo(Osu):
             return {'answer': f'{user_info["username"]} has no recent plays with those options.'}
 
         for bmp in islice(bmp_list, page, page + min(len(bmp_list) - page, self.items_per_page)):
-            temp_title = f'{bmp["beatmapset"]["artist"][:18]} - {bmp["beatmapset"]["title"][:18]} [{bmp["beatmap"]["version"][:18]}] '
+            temp_title = f'{bmp["beatmapset"]["artist"][:20]} - {bmp["beatmapset"]["title"][:20]} [{bmp["beatmap"]["version"][:15]}] '
             title = hlink(temp_title, f'https://osu.ppy.sh/b/{bmp["beatmap_id"]}')
             playcount = f'▶{bmp["count"]}\n'
             answer += title + playcount

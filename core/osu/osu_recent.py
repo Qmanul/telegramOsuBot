@@ -31,11 +31,8 @@ class OsuRecent(Osu):
             gamemode = db_gamemode
 
         user_info = await self.osuAPI.get_user(username, gamemode)
-        try:
-            user_info['error']
+        if 'error' is user_info:
             return {'answer': f'{username} was not found'}
-        except KeyError:
-            pass
 
         include_fails = 0 if options['pass'] else 1
 

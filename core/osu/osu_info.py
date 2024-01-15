@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import io
 from itertools import islice
 from math import ceil
@@ -57,12 +56,12 @@ class OsuInfo(Osu):
 
         for gamemode in self.gamemodes:
             osu_user = await self.osuAPI.get_user(username, gamemode)
-            if osu_user:
+            if osu_user and ('error' not in osu_user):
                 break
             await asyncio.sleep(.5)
 
-        if not osu_user:
-            return f"{username} doesn't exists"
+        if 'error' in osu_user:
+            return {'answer': f"{username} doesn't exists"}
 
         if not await self.user_db.check_user_exists(telegram_user.id):
             await self.user_db.create_new_user(telegram_user, osu_user)

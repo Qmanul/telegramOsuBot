@@ -15,10 +15,8 @@ class UserDatabase:
 
     async def update_user(self, user_id, update):
         async with aiosqlite.connect(self.db_path) as db:
-            for key, item in update.items():
-                await db.execute("UPDATE profile SET {} = '{}' WHERE user_id = '{}'".format(
-                    key, item, user_id
-                ))
+            set_string = ', '.join([f"{key} = '{value}'" for key, value in update.items()])
+            await db.execute(f"UPDATE profile SET {set_string} WHERE telegram_user_id = '{user_id}'")
             await db.commit()
 
     async def create_new_user(self, user, osu_user):

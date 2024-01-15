@@ -1,5 +1,4 @@
 import re
-from aiogram.filters import CommandObject
 
 from config_reader import config
 from core.database.database import UserDatabase

@@ -15,11 +15,15 @@ class Osu:
         self.nerinyanAPI = NerinyanAPI()
         self.user_db = UserDatabase()
         self.gamemodes = ['osu', 'taiko', 'fruits', 'mania']
+        self.mode_names = {'osu': 'osu! Standard',
+                           'taiko': 'osu! Taiko',
+                           'fruits': 'Catch the Beat',
+                           'mania': 'osu! Mania'}
 
     async def test(self, options):
         username = options
         user = await self.osuAPI.get_user(username)
-        response = await self.osuAPI.get_user_beatmaps(user['id'], bmp_type='most_played')
+        response = await self.osuAPI.get_user_beatmaps(user['id'], bmp_type='sdf')
         print(response)
         return {'answer': '1'}
 
@@ -75,7 +79,7 @@ class Osu:
         outputs, gamemodes = option_parser.parse(inputs)
 
         if any(gamemodes.values()):
-            gamemode_fin = filter(lambda gamemode:gamemodes[gamemode], gamemodes).__next__()
+            gamemode_fin = filter(lambda gamemode: gamemodes[gamemode], gamemodes).__next__()
         else:
             gamemode_fin = None
 

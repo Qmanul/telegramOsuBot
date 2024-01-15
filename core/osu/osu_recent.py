@@ -31,7 +31,7 @@ class OsuRecent(Osu):
             gamemode = db_gamemode
 
         user_info = await self.osuAPI.get_user(username, gamemode)
-        if 'error' is user_info:
+        if 'error' in user_info:
             return {'answer': f'{username} was not found'}
 
         include_fails = 0 if options['pass'] else 1
@@ -46,7 +46,7 @@ class OsuRecent(Osu):
                                                           include_fails=include_fails)
             if not play_list:
                 return {
-                    'answer': f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)}',
+                    'answer': f'{user_info["username"]} has no recent plays for {self.mode_names(gamemode)}',
                 }
 
             await osu_utils.add_index_key(play_list)
@@ -65,10 +65,10 @@ class OsuRecent(Osu):
 
             if not temp_play_list:
                 return {
-                    'answer': f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)} with those options.',
+                    'answer': f'{user_info["username"]} has no recent plays for {self.mode_names(gamemode)} with those options.',
                 }
             play_list = temp_play_list
-
+        
         if options['list']:
             try:
                 page = int(options['page']) - 1
@@ -81,7 +81,7 @@ class OsuRecent(Osu):
                 play_fin = play_list[options['index'] - 1]
             except IndexError:
                 return {
-                    'answer': f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)} with those options.',
+                    'answer': f'{user_info["username"]} has no recent plays for {self.mode_names(gamemode)} with those options.',
                 }
         else:
             play_fin = play_list[0]
@@ -99,7 +99,7 @@ class OsuRecent(Osu):
         answer = ''
         beatmap = await self.osuAPI.get_beatmap(play_info['beatmap']['id'])
         filepath = await self.osuAPI.download_beatmap(beatmap_info=beatmap, api='nerinyan')
-        header = f"{flag(user_info['country_code'])} {answer_type} {osu_utils.beautify_mode_text(gamemode)} Play for {user_info['username']}:\n"
+        header = f"{flag(user_info['country_code'])} {answer_type} {self.mode_names(gamemode)} Play for {user_info['username']}:\n"
 
         title, text, score_date = await osu_utils.create_play_info(play_info, beatmap, filepath)
 
@@ -119,11 +119,11 @@ class OsuRecent(Osu):
 
     async def recent_answer_list(self, user_info, play_list: list, gamemode, page):
         answer = ''
-        header = f'{flag(user_info["country_code"])} Recent {osu_utils.beautify_mode_text(gamemode)} Plays for {user_info["username"]}:\n'
+        header = f'{flag(user_info["country_code"])} Recent {self.mode_names(gamemode)} Plays for {user_info["username"]}:\n'
         answer += header
         max_page = ceil(len(play_list) / self.items_per_page)
         if page > max_page:
-            return {'answer': f'{user_info["username"]} has no recent plays for {osu_utils.beautify_mode_text(gamemode)} with those options.'}
+            return {'answer': f'{user_info["username"]} has no recent plays for {self.mode_names(gamemode)} with those options.'}
         page = self.items_per_page * page
 
         for play_info in islice(play_list, page, page + min(len(play_list) - page, self.items_per_page)):

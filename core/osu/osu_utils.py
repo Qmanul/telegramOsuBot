@@ -7,16 +7,6 @@ from aiogram.utils.markdown import hlink
 from core.utils import other_utils
 
 
-def beautify_mode_text(gamemode: str):
-    mode_names = {
-        'osu': 'osu! Standard',
-        'taiko': 'osu! Taiko',
-        'fruits': 'Catch the Beat',
-        'mania': 'osu! Mania'
-    }
-    return mode_names[gamemode]
-
-
 async def get_full_play_info(filepath, play_info: dict):
     bmp = oppadc.OsuMap(file_path=filepath)
     info = await fix_keys(play_info)

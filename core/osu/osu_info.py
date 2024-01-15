@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import io
 from itertools import islice
 from math import ceil
@@ -33,14 +34,12 @@ class OsuInfo(Osu):
             'userSupportFirst': osu_utils.process_user_info_recent_user_support,
             'userSupportGift': osu_utils.process_user_info_recent_user_support,
             'userSupportAgain': osu_utils.process_user_info_recent_user_support,
-            'usernameChange': osu_utils.process_user_info_recent_usernameChange
-        }
+            'usernameChange': osu_utils.process_user_info_recent_usernameChange}
         self.extra_info_dict = {'previous_usernames': '▸ <b>Previously known as:</b> {}\n',
                                 'playstyle': '▸ <b>Playstyle:</b> {}\n',
                                 'follower_count': '▸ <b>Followers:</b> {}\n',
                                 'ranked_and_approved_beatmapset_count': '▸ <b>Ranked/Approved Beatmaps:</b> {}\n',
-                                'replays_watched_by_others': '▸ <b>Replays Watched By Others:</b> {}\n'
-                                }
+                                'replays_watched_by_others': '▸ <b>Replays Watched By Others:</b> {}\n'}
         self.bytes_buffer = io.BytesIO()
         self.items_per_page = 20
 
@@ -98,11 +97,10 @@ class OsuInfo(Osu):
             return await self.user_info_recent_answer(user_info, gamemode)
 
         if options['beatmaps']:
-            bmp_type = options['beatmaps']
-            return
+            return await self.user_info_beatmaps_answer(user_info, options['beatmaps'], options['page'])
 
         if options['most_played']:
-            return await self.user_info_most_played_answer(user_info, options['page'])
+            return await self.user_info_beatmaps_answer(user_info, 'most_played', options['page'])
 
         if options['detailed']:
             return await self.user_info_answer(user_info, gamemode, detailed=True)
@@ -111,7 +109,7 @@ class OsuInfo(Osu):
 
     async def user_info_answer(self, user, gamemode, detailed=False):
         answer = ''
-        header_temp = f'{flag(user["country_code"])} {osu_utils.beautify_mode_text(gamemode)} Profile for {user["username"]}\n'
+        header_temp = f'{flag(user["country_code"])} {self.mode_names(gamemode)} Profile for {user["username"]}\n'
         header = hlink(header_temp, await self.osuAPI.get_user_url(user['id']))
 
         text = ''
@@ -190,7 +188,7 @@ class OsuInfo(Osu):
 
         rank = f'#{user["statistics"]["global_rank"]}' if user['statistics']['global_rank'] else '-'
         country_rank = f"#{user['statistics']['country_rank']}" if user['statistics']['country_rank'] else ''
-        header_temp = (f'{flag(user["country_code"])} Recent {osu_utils.beautify_mode_text(gamemode)} Activity for '
+        header_temp = (f'{flag(user["country_code"])} Recent {self.mode_names(gamemode)} Activity for '
                        f'{user["username"]} [{rank} | {user["country_code"]}{country_rank}]\n')
         header = hlink(header_temp, await self.osuAPI.get_user_url(user['id']))
 
@@ -212,31 +210,31 @@ class OsuInfo(Osu):
         answer += footer
         return {'answer': answer, 'disable_web_page_preview': True}
 
-    async def user_info_beatmaps_answer(self, user_info, bmp_type):
-        answer = ''
+    async def user_info_beatmaps_answer(self, user_info, bmp_type, page):
+        bmp_list = await self.osuAPI.get_user_beatmaps(user_info['id'], bmp_type)
+        if 'error' in bmp_list:
+            return {'answer': 'Please check your inputs for errors!'}
 
-        return {'answer': answer}
-
-    # TODO сделать универсальный метод для карт и зашить в него этот
-    async def user_info_most_played_answer(self, user_info, page):
-        bmp_list = await self.osuAPI.get_user_beatmaps(user_info['id'], 'most_played')
         answer = ''
-        header = f'{flag(user_info["country_code"])} Most played beatmaps for {user_info["username"]}:\n'
+        header = f'{flag(user_info["country_code"])} {bmp_type.replace("_", " ").capitalize()} beatmaps for {user_info["username"]}:\n'
         answer += header
+        page = page * self.items_per_page if page else 0
         max_page = ceil(len(bmp_list) / self.items_per_page)
-
-        if not page:
-            page = 0
-        else:
-            page = page * self.items_per_page
 
         if page // self.items_per_page > max_page:
             return {'answer': f'{user_info["username"]} has no recent plays with those options.'}
 
         for bmp in islice(bmp_list, page, page + min(len(bmp_list) - page, self.items_per_page)):
-            temp_title = f'{bmp["beatmapset"]["artist"][:20]} - {bmp["beatmapset"]["title"][:20]} [{bmp["beatmap"]["version"][:15]}] '
-            title = hlink(temp_title, f'https://osu.ppy.sh/b/{bmp["beatmap_id"]}')
-            playcount = f'▶{bmp["count"]}\n'
+            try:
+                temp_title = f'{bmp["artist"][:20]} - {bmp["title"][:25]} '
+                title = hlink(temp_title, f'https://osu.ppy.sh/b/{bmp["id"]}')
+                playcount = f'▶{bmp["play_count"]} ❤︎{bmp["favourite_count"]}\n'
+            except KeyError as e:
+                print(e.args)
+                temp_title = f'{bmp["beatmapset"]["artist"][:18]} - {bmp["beatmapset"]["title"][:20]} '
+                temp_title += f'[{bmp["beatmap"]["version"][:15]}] '
+                title = hlink(temp_title, f'https://osu.ppy.sh/b/{bmp["beatmap_id"]}')
+                playcount = f'▶{bmp["count"]}\n'
             answer += title + playcount
 
         footer = f'On osu! Bancho Server | Page {page // self.items_per_page + 1} of {max_page}'

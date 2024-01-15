@@ -19,7 +19,7 @@ class OsuInfo(Osu):
         self.options = [{'opt': 'r', 'opt_value': 'recent', 'opt_type': None, 'default': False},
                         {'opt': 'b', 'opt_value': 'beatmaps', 'opt_type': str, 'default': None},
                         {'opt': 'p', 'opt_value': 'page', 'opt_type': int, 'default': None},
-                        {'opt': 'mp', 'opt_value': 'mostplayed', 'opt_type': None, 'default': False},
+                        {'opt': 'mp', 'opt_value': 'most_played', 'opt_type': None, 'default': False},
                         {'opt': 'd', 'opt_value': 'detailed', 'opt_type': None, 'default': False}]
         self.recent_event_types_dict = {
             'achievement': osu_utils.process_user_info_recent_achievement,
@@ -101,7 +101,7 @@ class OsuInfo(Osu):
             bmp_type = options['beatmaps']
             return
 
-        if options['mostplayed']:
+        if options['most_played']:
             return await self.user_info_most_played_answer(user_info, options['page'])
 
         if options['detailed']:
@@ -121,7 +121,7 @@ class OsuInfo(Osu):
         text += text_rank
 
         peak_rank_date = await other_utils.format_date(user['rank_highest']['updated_at'][:-1])
-        text_peak_rank = f"▸ <b>Peak Rank:</b> #{user['rank_highest']['rank']} achived {peak_rank_date}\n"
+        text_peak_rank = f"▸ <b>Peak Rank:</b> #{user['rank_highest']['rank']} achieved {peak_rank_date}\n"
         text += text_peak_rank
 
         text_level = f"▸ <b>Level:</b> {user['statistics']['level']['current']} + {user['statistics']['level']['progress']}%\n"
@@ -216,7 +216,7 @@ class OsuInfo(Osu):
     async def user_info_most_played_answer(self, user_info, page):
         bmp_list = await self.osuAPI.get_user_beatmaps(user_info['id'], 'most_played')
         answer = ''
-        header = f'{flag(user_info["country_code"])} Most played beatmaps for Qmanul {user_info["username"]}:\n'
+        header = f'{flag(user_info["country_code"])} Most played beatmaps for {user_info["username"]}:\n'
         answer += header
         max_page = ceil(len(bmp_list) / self.items_per_page)
         try:

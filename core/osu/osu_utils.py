@@ -44,6 +44,7 @@ async def get_full_play_info(filepath, play_info: dict):
             info['count_miss'] >= 1 or ('S' in play_info['rank'] and play_info['max_combo'] <= bmp.maxCombo() * 0.9) or
             play_info['max_combo'] < bmp.maxCombo() // 2):
 
+        # noinspection PyTypeChecker
         fc_pp = bmp.getPP(Mods=mods, combo=bmp.maxCombo(), n300=info['count_300'] + info['count_miss'],
                           n100=info['count_100'], n50=info['count_50'], misses=0, recalculate=True)
         res['fc_pp'] = fc_pp.total_pp

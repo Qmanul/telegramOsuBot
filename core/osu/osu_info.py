@@ -224,10 +224,11 @@ class OsuInfo(Osu):
         header = f'{flag(user_info["country_code"])} Most played beatmaps for {user_info["username"]}:\n'
         answer += header
         max_page = ceil(len(bmp_list) / self.items_per_page)
-        try:
-            page = self.items_per_page * (page - 1)
-        except TypeError:
+
+        if not page:
             page = 0
+        else:
+            page = page * self.items_per_page
 
         if page // self.items_per_page > max_page:
             return {'answer': f'{user_info["username"]} has no recent plays with those options.'}

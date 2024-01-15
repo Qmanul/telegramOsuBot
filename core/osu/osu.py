@@ -1,11 +1,9 @@
 import re
 from aiogram.filters import CommandObject
-from aiogram.types import BufferedInputFile
 
 from config_reader import config
 from core.database.database import UserDatabase
 from core.osu.osuAPI import OsuApi, NerinyanAPI
-from core.utils import drawing
 from core.utils.option_parser import OptionParser
 
 
@@ -19,8 +17,8 @@ class Osu:
         self.user_db = UserDatabase()
         self.gamemodes = ['osu', 'taiko', 'fruits', 'mania']
 
-    async def test(self, options: CommandObject):
-        username = options.args
+    async def test(self, options):
+        username = options
         user = await self.osuAPI.get_user(username)
         response = await self.osuAPI.get_user_beatmaps(user['id'], bmp_type='most_played')
         print(response)

@@ -83,12 +83,10 @@ class OsuInfo(Osu):
             return {'answer': processed_options, }
 
         gamemode = option_gamemode if option_gamemode else gamemode
+
         user_info = await self.osuAPI.get_user(username, gamemode)
-        try:
-            user_info['error']
+        if 'error' in user_info:
             return {'answer': f'{username} was not found'}
-        except KeyError:
-            pass
 
         if options['recent']:
             return await self.user_info_recent_answer(user_info, gamemode)
@@ -105,7 +103,7 @@ class OsuInfo(Osu):
 
         return await self.user_info_answer(user_info, gamemode)
 
-    async def user_info_answer(self, user, gamemode, **kwargs):
+    async def user_info_answer(self, user, gamemode, detailed=False):
         answer = ''
         header_temp = f'{flag(user["country_code"])} {osu_utils.beautify_mode_text(gamemode)} Profile for {user["username"]}\n'
         header = hlink(header_temp, await self.osuAPI.get_user_url(user['id']))
@@ -141,7 +139,7 @@ class OsuInfo(Osu):
             footer += f' Last Seen {visit_delta}'
         footer += ' On osu! Bancho Server'
 
-        if 'detailed' in kwargs:
+        if detailed:
             recent_list = await self.osuAPI.get_user_recent_activity(user['id'])
             if recent_list:
                 text_recent = '<b>Recent events</b>\n'

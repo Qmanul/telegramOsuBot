@@ -14,7 +14,10 @@ class OptionParser(object):
 
             if self._opts[option]['opt_type']:
                 try:
-                    value = int(inputs[i+1]) if inputs[i+1].isdigit() else inputs[i+1]
+                    try:
+                        value = int(inputs[i+1])
+                    except ValueError:
+                        value = inputs[i+1]
                 except IndexError:
                     return False
                 if not isinstance(value, self._opts[option]['opt_type']) or value in self._opts:
@@ -27,5 +30,3 @@ class OptionParser(object):
             options[self._opts[option]['opt_value']] = value
 
         return inputs, options
-
-

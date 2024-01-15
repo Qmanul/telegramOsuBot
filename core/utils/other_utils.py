@@ -1,8 +1,7 @@
 import io
 from datetime import datetime
-
 from PIL import Image
-from dateutil.relativedelta import *
+from dateutil.relativedelta import relativedelta
 
 
 async def get_image_by_url(url):
@@ -14,6 +13,7 @@ async def get_image_by_url(url):
             return Image.open(io.BytesIO(await res.read())).convert('RGBA')
 
 
+# credits to some stranger from stack overflow
 async def fig2img(fig):
     buf = io.BytesIO()
     fig.savefig(buf, transparent=True)

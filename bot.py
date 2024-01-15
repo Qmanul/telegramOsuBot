@@ -4,7 +4,7 @@ from aiogram import Bot, Dispatcher
 
 from config_reader import config
 from core.database.database import UserDatabase
-from core.handlers import user_info, user_scores
+from core.handlers import user_info_handler, user_scores_handler
 from core.test import pagination_test
 
 

@@ -20,13 +20,6 @@ class Osu:
                            'fruits': 'Catch the Beat',
                            'mania': 'osu! Mania'}
 
-    async def test(self, options):
-        username = options
-        user = await self.osuAPI.get_user(username)
-        response = await self.osuAPI.get_user_beatmaps(user['id'], bmp_type='sdf')
-        print(response)
-        return {'answer': '1'}
-
     async def process_user_inputs(self, telegram_user, args, parse_options):
         try:
             inputs = re.findall(r'\".+?\"|\S+', args)

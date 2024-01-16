@@ -6,11 +6,11 @@ from aiogram import types
 from core.osu.osu_recent import OsuRecent
 
 
-router = Router()
+user_scores_router = Router()
 osu = OsuRecent()
 
 
-@router.message(Command("recent", "rs", prefix=">"))
+@user_scores_router.message(Command("recent", "rs", prefix=">"))
 async def cmd_recent(message: types.Message, command: CommandObject):
     answer = await osu.process_user_recent(message.from_user, command.args)
     try:
@@ -18,9 +18,3 @@ async def cmd_recent(message: types.Message, command: CommandObject):
                              parse_mode=ParseMode.HTML)
     except KeyError:
         await message.answer(answer['answer'], parse_mode=ParseMode.HTML)
-
-
-@router.message(Command("test", prefix=">"))
-async def cmt_test(message: types.Message, command: CommandObject):
-    answer = await osu.test(command.args)
-    await message.answer(answer['answer'])

@@ -93,3 +93,8 @@ async def plot_profile(user):
             (0, 0, graph.width, graph.height)).filter(ImageFilter.GaussianBlur(10))).enhance(.5)
 
     return Image.alpha_composite(banner, graph)
+
+
+async def score_image():
+          
+    return

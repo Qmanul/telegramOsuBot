@@ -4,6 +4,7 @@ from flag import flag
 
 from core.osu import osu_utils
 from core.osu.osu import Osu
+from core.utils import drawing
 
 
 class OsuRecent(Osu):
@@ -12,6 +13,7 @@ class OsuRecent(Osu):
         self.options = [{'opt': 'b', 'opt_value': 'best', 'opt_type': None, 'default': False},
                         {'opt': 'ps', 'opt_value': 'pass', 'opt_type': None, 'default': False},
                         {'opt': 'i', 'opt_value': 'index', 'opt_type': int, 'default': None},
+                        {'opt': 'im', 'opt_value': 'image', 'opt_type': None, 'default': False},
                         {'opt': 'p', 'opt_value': 'page', 'opt_type': int, 'default': None},
                         {'opt': '?', 'opt_value': 'search', 'opt_type': str, 'default': None},
                         {'opt': 'l', 'opt_value': 'list', 'opt_type': None, 'default': False}]
@@ -85,6 +87,9 @@ class OsuRecent(Osu):
                 }
         else:
             play_fin = play_list[0]
+
+        if options['image']:
+            return await drawing.score_image()
 
         if options['best']:
             answer_type = f'Top {str(play_fin["index"] + 1)}'

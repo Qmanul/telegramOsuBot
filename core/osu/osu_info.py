@@ -171,7 +171,7 @@ class OsuInfo(Osu):
             answer += header
             answer += text
             answer += footer
-            return {'answer': answer, 'photo': BufferedInputFile(img_byte_arr, filename='plot.png')}
+            return {'answer': answer, 'photo': BufferedInputFile(а, filename='plot.png')}
 
         answer += header
         answer += text

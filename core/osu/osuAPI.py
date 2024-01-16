@@ -234,6 +234,7 @@ class NerinyanAPI:
     def __init__(self):
         self.name = 'Nerinyan'
         self.base = 'https://api.nerinyan.moe/d/{}?noVideo=true&noBg=true&NoHitsound=true&NoStoryboard=true'
+        self.base_bg = 'https://api.nerinyan.moe/bg/{}'
         self.headers = {'Content-Type': 'application/x-osu-beatmap-archive'}
         self.extract_path = os.path.join(os.getcwd(), 'core', 'osu', 'beatmaps', 'extract')
         self.beatmap_path = os.path.join(os.getcwd(), 'core', 'osu', 'beatmaps')
@@ -267,18 +268,21 @@ class NerinyanAPI:
         with zipfile.ZipFile(BytesIO(beatmap)) as r:  # распаковываем мапсет
             r.extractall(self.extract_path)
 
-        for osu_file in glob.glob(os.path.join(self.extract_path, '*.osu')):  # находим все .osu файлы и итерируем по ним
+        for osu_file in glob.glob(
+                os.path.join(self.extract_path, '*.osu')):  # находим все .osu файлы и итерируем по ним
             async with aiofiles.open(osu_file, 'r', encoding='utf-8') as f:
                 async for line in f:
                     if 'BeatmapID:' not in line:
                         continue
                     beatmap_id = str(line).split(':')[1].strip()  # находим ид карты
-                    shutil.copy2(osu_file, os.path.join(self.beatmap_path, f'{beatmap_id}.osu')) # переимеовываем файл и кидаем в папку с картами
+                    shutil.copy2(osu_file, os.path.join(self.beatmap_path, f'{beatmap_id}.osu'))  # переимеовываем файл и кидаем в папку с картами
                     break
+
+    async def get_beatmap_background(self, bmp_id):
+        return self.download_file(self.base_bg.format(bmp_id))
 
     async def download_file(self, url):
         async with aiohttp.ClientSession(headers=self.headers) as session:
             async with session.get(url) as res:
                 if res.ok:
                     return await res.read()
-

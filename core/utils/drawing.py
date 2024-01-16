@@ -1,8 +1,14 @@
+import io
+import scipy.cluster
+import sklearn.cluster
+import numpy
 from PIL import ImageFilter, Image, ImageEnhance
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import datetime, timedelta, date
 from dateutil.rrule import rrule, MONTHLY
+
+from core.osu import osu_utils
 from core.utils import other_utils
 
 
@@ -85,16 +91,54 @@ async def plot_profile(user):
 
     graph = await other_utils.fig2img(fig)
     banner = await other_utils.get_image_by_url(user['cover_url'])
-
-    scale_factor = max(graph.height / banner.height, graph.width / banner.width)
-
-    banner = ImageEnhance.Brightness(
-        banner.resize((round(banner.width * scale_factor) + 1, round(banner.height * scale_factor) + 1), Image.LANCZOS).crop(
-            (0, 0, graph.width, graph.height)).filter(ImageFilter.GaussianBlur(10))).enhance(.5)
+    scale = max(graph.height / banner.height, graph.width / banner.width)
+    banner = await banner_enhancer(banner, scale, (0, 0, graph.width, graph.height))
 
     return Image.alpha_composite(banner, graph)
 
 
-async def score_image():
-          
+# TODO
+async def score_image(play_info, banner, map_info):
+    size = (0, 0, 1500, 500)
+    banner = Image.open(io.BytesIO(banner))
+    color_scheme = await dominant_colors(banner)
+    scale = max(size[2] / banner.width, size[3] / banner.height)
+    banner = await banner_enhancer(banner, scale, size)
+    version_icon = await osu_utils.get_version_icon(map_info['star_rating'], play_info['mode'])
+
     return
+
+
+async def draw_text(text, image, position: tuple):
+    return
+
+
+async def banner_enhancer(img, scale, size):
+    return ImageEnhance.Brightness(img.resize((round(img.width * scale) + 1, round(img.height * scale) + 1),
+                                              Image.LANCZOS).crop(size).filter(ImageFilter.GaussianBlur(10))).enhance(
+        .5)
+
+
+# credits to Jacob https://stackoverflow.com/questions/3241929/python-find-dominant-most-common-color-in-an-image
+async def dominant_colors(image):
+    image = image.resize((100, 100))
+    ar = numpy.asarray(image)
+    shape = ar.shape
+    ar = ar.reshape(numpy.prod(shape[:2]), shape[2]).astype(float)
+
+    kmeans = sklearn.cluster.MiniBatchKMeans(
+        n_clusters=5,
+        init="k-means++",
+        max_iter=20,
+        random_state=1000,
+        n_init=3
+    ).fit(ar)
+    codes = kmeans.cluster_centers_
+
+    vecs, _dist = scipy.cluster.vq.vq(ar, codes)
+    counts, _bins = numpy.histogram(vecs, len(codes))
+
+    colors = []
+    for index in numpy.argsort(counts)[::-1]:
+        colors.append(tuple([int(code) for code in codes[index]]))
+    return colors

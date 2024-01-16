@@ -13,11 +13,15 @@ async def get_full_play_info(filepath, play_info: dict):
     res = {}
 
     mods = ''.join(play_info['mods']) if play_info['mods'] else 'NoMod'
+
+    res['star_rating'] = round(bmp.getStats(mods, recalculate=True).total, 2)
+
+    max_pp = bmp.getPP(Mods=mods, recalculate=True)
+    res['max_pp'] = max_pp.total_pp
+
     pp = bmp.getPP(Mods=mods, combo=info['max_combo'], n300=info['count_300'],
                    n100=info['count_100'], n50=info['count_50'], misses=info['count_miss'], recalculate=True)
     res['pp'] = pp.total_pp
-
-    res['star_rating'] = round(bmp.getStats(mods, recalculate=True).total, 2)
 
     if 'F' in play_info['rank']:
         completion_hits = int(info['count_50']) + int(info['count_100']) + int(info['count_300']) + int(
@@ -33,7 +37,6 @@ async def get_full_play_info(filepath, play_info: dict):
     if info['mode'] == 'osu' and (
             info['count_miss'] >= 1 or ('S' in play_info['rank'] and play_info['max_combo'] <= bmp.maxCombo() * 0.9) or
             play_info['max_combo'] < bmp.maxCombo() // 2):
-
         # noinspection PyTypeChecker
         fc_pp = bmp.getPP(Mods=mods, combo=bmp.maxCombo(), n300=info['count_300'] + info['count_miss'],
                           n100=info['count_100'], n50=info['count_50'], misses=0, recalculate=True)
@@ -135,10 +138,42 @@ async def process_user_info_recent_user_support(recent_info: dict, date):
         return f'Has bought osu!supporter again {date}\n'
 
 
+async def add_index_key(play_list):
+    for index, play_info in enumerate(play_list):
+        play_info['index'] = index
+
+
 async def process_user_info_recent_usernameChange(recent_info: dict, date):
     return
 
 
-async def add_index_key(play_list):
-    for index, play_info in enumerate(play_list):
-        play_info['index'] = index
+async def get_version_icon(star_rating, gamemode):
+    version_name = await get_version_name(star_rating)
+    version_mode_letter = await get_version_mode_letter(gamemode)
+    version_url = f'https://osu.ppy.sh/help/wiki/shared/diff/{version_name}-{version_mode_letter}.png'
+    return await other_utils.get_image_by_url(version_url)
+
+
+async def get_version_name(star_rating):
+    star_rating *= 100
+    if star_rating in range(200):
+        return 'easy'
+    elif star_rating in range(200, 270):
+        return 'norma;'
+    elif star_rating in range(270, 400):
+        return 'hard'
+    elif star_rating in range(400, 530):
+        return 'insane'
+    elif star_rating in range(530, 650):
+        return 'expert'
+    else:
+        return 'expertplus'
+
+
+async def get_version_mode_letter(gamemode):
+    gamemode_letter = {
+        'osu': 'o',
+        'fruit': 'c',
+        'taiko': 't',
+        'mania': 'm'
+    }

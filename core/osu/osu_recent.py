@@ -89,7 +89,11 @@ class OsuRecent(Osu):
             play_fin = play_list[0]
 
         if options['image']:
-            return await drawing.score_image()
+            banner = await self.nerinyanAPI.get_beatmap_background(play_fin['beatmap']['id'])
+            beatmap = await self.osuAPI.get_beatmap(play_fin['beatmap']['id'])
+            filepath = await self.osuAPI.download_beatmap(beatmap_info=beatmap, api='nerinyan')
+            map_info = await osu_utils.get_full_play_info(filepath, play_fin)
+            return await drawing.score_image(play_fin, banner, map_info)
 
         if options['best']:
             answer_type = f'Top {str(play_fin["index"] + 1)}'

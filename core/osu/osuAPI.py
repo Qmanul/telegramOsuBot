@@ -279,7 +279,7 @@ class NerinyanAPI:
                     break
 
     async def get_beatmap_background(self, bmp_id):
-        return self.download_file(self.base_bg.format(bmp_id))
+        return await self.download_file(self.base_bg.format(bmp_id))
 
     async def download_file(self, url):
         async with aiohttp.ClientSession(headers=self.headers) as session:

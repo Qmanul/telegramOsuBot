@@ -1,5 +1,4 @@
 import asyncio
-import io
 from itertools import islice
 from math import ceil
 
@@ -38,7 +37,6 @@ class OsuInfo(Osu):
                                 'follower_count': '▸ <b>Followers:</b> {}\n',
                                 'ranked_and_approved_beatmapset_count': '▸ <b>Ranked/Approved Beatmaps:</b> {}\n',
                                 'replays_watched_by_others': '▸ <b>Replays Watched By Others:</b> {}\n'}
-        self.bytes_buffer = io.BytesIO()
         self.items_per_page = 20
 
     async def process_set_user(self, telegram_user, args):
@@ -164,14 +162,11 @@ class OsuInfo(Osu):
                 text += text_extra_info
 
             plot = await drawing.plot_profile(user)
-            plot.save(self.bytes_buffer, format='PNG')
-            self.bytes_buffer.seek(0)
-            img_byte_arr = self.bytes_buffer.getvalue()
-            self.bytes_buffer.truncate(0)
+            plot_bytes = await other_utils.pillow_image_to_bytes(plot, self.bytes_buffer)
             answer += header
             answer += text
             answer += footer
-            return {'answer': answer, 'photo': BufferedInputFile(а, filename='plot.png')}
+            return {'answer': answer, 'photo': BufferedInputFile(plot_bytes, filename='plot.png')}
 
         answer += header
         answer += text

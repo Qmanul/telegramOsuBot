@@ -1,3 +1,4 @@
+import io
 import re
 
 from config_reader import config
@@ -19,6 +20,7 @@ class Osu:
                            'taiko': 'osu! Taiko',
                            'fruits': 'Catch the Beat',
                            'mania': 'osu! Mania'}
+        self.bytes_buffer = io.BytesIO()
 
     async def process_user_inputs(self, telegram_user, args, parse_options):
         try:

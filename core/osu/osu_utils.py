@@ -1,7 +1,9 @@
 import copy
+import os.path
 
 import emoji
 import oppadc
+from PIL import Image
 from aiogram.utils.markdown import hlink
 
 from core.utils import other_utils
@@ -11,12 +13,26 @@ async def get_full_play_info(filepath, play_info: dict):
     bmp = oppadc.OsuMap(file_path=filepath)
     info = await fix_keys(play_info)
     res = {}
-
     mods = ''.join(play_info['mods']) if play_info['mods'] else 'NoMod'
 
-    res['star_rating'] = round(bmp.getStats(mods, recalculate=True).total, 2)
+    speed_scale = 1.0
+    if any(mod in mods for mod in ['DT', 'NC']):
+        speed_scale *= 1.5
+    if 'HT' in mods:
+        speed_scale *= 0.75
+    res['bpm'] = play_info['beatmap']['bpm'] * speed_scale
 
-    max_pp = bmp.getPP(Mods=mods, recalculate=True)
+    stats = bmp.getDifficulty(Mods=mods, recalculate=True)
+    res['ar'] = stats.ar
+    res['cs'] = stats.cs
+    res['od'] = stats.od
+    res['hp'] = stats.hp
+
+    res['max_combo'] = bmp.maxCombo()
+
+    res['star_rating'] = round(bmp.getStats(mods).total, 2)
+
+    max_pp = bmp.getPP(Mods=mods)
     res['max_pp'] = max_pp.total_pp
 
     pp = bmp.getPP(Mods=mods, combo=info['max_combo'], n300=info['count_300'],
@@ -148,32 +164,9 @@ async def process_user_info_recent_usernameChange(recent_info: dict, date):
 
 
 async def get_version_icon(star_rating, gamemode):
-    version_name = await get_version_name(star_rating)
-    version_mode_letter = await get_version_mode_letter(gamemode)
-    version_url = f'https://osu.ppy.sh/help/wiki/shared/diff/{version_name}-{version_mode_letter}.png'
-    return await other_utils.get_image_by_url(version_url)
-
-
-async def get_version_name(star_rating):
-    star_rating *= 100
-    if star_rating in range(200):
-        return 'easy'
-    elif star_rating in range(200, 270):
-        return 'norma;'
-    elif star_rating in range(270, 400):
-        return 'hard'
-    elif star_rating in range(400, 530):
-        return 'insane'
-    elif star_rating in range(530, 650):
-        return 'expert'
+    if star_rating > 9:
+        star_rating = 9.0
     else:
-        return 'expertplus'
-
-
-async def get_version_mode_letter(gamemode):
-    gamemode_letter = {
-        'osu': 'o',
-        'fruit': 'c',
-        'taiko': 't',
-        'mania': 'm'
-    }
+        star_rating = round(star_rating, 1)
+    path = os.path.join(os.getcwd(), 'core', 'osu', 'images', 'diff_icons', gamemode, f'{star_rating}.png')
+    return Image.open(path)

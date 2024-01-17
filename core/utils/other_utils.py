@@ -39,3 +39,11 @@ async def format_date(date_str):
         return 'Just Now'
     result = ' '.join(result[:2]) + ' Ago'
     return result
+
+
+async def pillow_image_to_bytes(image, buffer):
+    image.save(buffer, format='PNG')
+    buffer.seek(0)
+    img_byte_arr = buffer.getvalue()
+    buffer.truncate(0)
+    return img_byte_arr

@@ -102,38 +102,27 @@ async def plot_profile(user):
 # TODO
 async def score_image(play_info, map_bg, map_info):
     #  gather info
+    img_text = []
     map_title = f'{play_info["beatmapset"]["artist"]} - {play_info["beatmapset"]["title"]}'
+    if len(map_title) >= 60:
+        map_title = f'{map_title[:55]}...'
     version = play_info['beatmap']['version']
-    username = play_info['user']['username']
-    score = format(play_info['score'], ',')
-    combo = {
-        'play_combo': str(play_info['max_combo']),
-        'max_combo': str(map_info['max_combo'])
-    }
+    if len(version) >= 40:
+        version = f'{version[:35]}...'
     accuracy = str(round(play_info['accuracy'] * 100, 2))
     hit_icons = [['300', 'geki'], ['100', 'katu'], ['50', 'miss']]
-    hit_count = [[str(play_info['statistics'][f'count_{hit_pair[0]}']), str(play_info['statistics'][f'count_{hit_pair[1]}'])] for hit_pair in hit_icons]
+    hit_count = [
+        [str(play_info['statistics'][f'count_{hit_pair[0]}']), str(play_info['statistics'][f'count_{hit_pair[1]}'])] for
+        hit_pair in hit_icons]
     play_date = f' {datetime.fromisoformat(play_info["created_at"][:-1]).strftime("%Y-%m-%d %H:%M:%S")} UTC'
-    pp = {
-        'play_pp': str(round(play_info['pp'])) if play_info['pp'] else str(round(map_info['pp'])),
-        'fc_pp': str(round(map_info['fc_pp']))
-    }
-    map_stats = {
-        'star_rating': str(round(map_info['star_rating'], 1)),
-        'bpm': str(int(map_info['bpm'])),
-        'ar': str(round(map_info['ar'], 1)),
-        'od': str(round(map_info['od'], 1)),
-        'hp': str(round(map_info['hp'], 1)),
-        'cs': str(round(map_info['cs'], 1))
-    }
-    mapper = play_info['beatmapset']['creator']
-    mods = play_info['mods']
+    play_pp = str(round(play_info['pp'])) if play_info['pp'] else str(round(map_info['pp']))
 
     size = (0, 0, 1500, 500)
     try:
         map_bg = Image.open(io.BytesIO(map_bg)).convert('RGBA')
     except UnidentifiedImageError:
-        map_bg = await other_utils.get_image_by_url(f'https://beatconnect.io/bg/{play_info["beatmap"]["beatmapset_id"]}/{play_info["beatmap"]["id"]}')
+        map_bg = await other_utils.get_image_by_url(
+            f'https://beatconnect.io/bg/{play_info["beatmap"]["beatmapset_id"]}/{play_info["beatmap"]["id"]}')
     dom_colors = await dominant_colors(map_bg)
     color_secondary = (100, 100, 100, 200)
     color_main = (255, 255, 255, 255)
@@ -156,7 +145,7 @@ async def score_image(play_info, map_bg, map_info):
 
     draw_rectangles.rectangle((0, 0, 25, 500), fill=dom_colors[0])
 
-    #  draw labels
+    #  draw text
     text_canvas = Image.new('RGBA', (size[2], size[3]), color=(0, 0, 0, 0))
     draw_text = ImageDraw.Draw(text_canvas)
     font_xlarge = ImageFont.truetype(font_main_path, 70)
@@ -183,89 +172,76 @@ async def score_image(play_info, map_bg, map_info):
     for label_text, label_coordinates in labels.items():
         draw_text.text(label_coordinates, label_text, font=font_xsmall, fill=font_clr)
 
-    test_temp = []
     #  title
-    if len(map_title) >= 60:
-        map_title = f'{map_title[:55]}...'
-    test_temp += [map_title, (41, 18), font_normal, color_main]
+    img_text.append([map_title, (41, 18), font_normal, color_main])
 
     #  difficulty
-    if len(version) >= 40:
-        version = f'{version[:35]}...'
-    test_temp += [version, (95, 70), font_normal, dom_colors[2]]
-    test_temp += ['played by', (100 + draw_text.textlength(version, font_normal), 70), font_normal, color_secondary]
-    test_temp += [username, (105 + draw_text.textlength(version, font_normal) + draw_text.textlength('played by', font_normal), 70), font_normal, dom_colors[2]]
+    img_text.append([version, (95, 70), font_normal, dom_colors[2]])
+    img_text.append(['played by', (100 + draw_text.textlength(version, font_normal), 70), font_normal, color_secondary])
+    img_text.append([play_info['user']['username'], (
+                    105 + draw_text.textlength(version, font_normal) + draw_text.textlength('played by', font_normal), 70),
+                    font_normal, dom_colors[2]])
 
     #  score
-    test_temp += [score, (41, 18), font_normal]
-    text_canvas, _ = await draw_text_glow(score, text_canvas, (40, 170), font=font_large)
+    img_text.append([format(play_info['score'], ','), (40, 170), font_large, color_main])
 
     #  combo
-    test_temp += [combo['play_combo'], (41, 18), font_normal]
-    text_canvas, temp_text_length = await draw_text_glow(combo['play_combo'], text_canvas, (40, 280), font=font_large)
-    test_temp += [f"/{combo['max_combo']}", (41, 18), font_normal]
-    text_canvas, _ = await draw_text_glow(f"/{combo['max_combo']}", text_canvas, (40 + temp_text_length, 310),
-                                          font=font_small)
+    img_text.append([str(play_info['max_combo']), (40, 280), font_large, color_main])
+    img_text.append(
+        [f"/{str(map_info['max_combo'])}", (40 + draw_text.textlength(str(play_info['max_combo']), font_large), 310),
+         font_small, color_main])
 
     #  accuracy
-    test_temp += [accuracy, (41, 18), font_normal]
-    text_canvas, temp_text_length = await draw_text_glow(accuracy, text_canvas, (390, 170), font=font_large)
-    test_temp += [' %', (41, 18), font_normal]
-    text_canvas, _ = await draw_text_glow(' %', text_canvas, (390 + temp_text_length, 200), font=font_small)
+    img_text.append([accuracy, (390, 170), font_large, color_main])
+    img_text.append([' %', (390 + draw_text.textlength(accuracy, font_large), 200), font_small, color_main])
 
+    #  mods
+    if not play_info['mods']:
+        img_text.append(['-', (620, 173), font_large, color_main])
     #  hit text
     temp_offset = 0
     for hit_pair in hit_count:
-        test_temp += [hit_pair[0], (41, 18), font_normal]
-        text_canvas, _ = await draw_text_glow(hit_pair[0], text_canvas, (480, 245 + temp_offset), font=font_normal)
-        test_temp += [hit_pair[1], (41, 18), font_normal]
-        text_canvas, _ = await draw_text_glow(hit_pair[1], text_canvas, (690, 240 + temp_offset), font=font_normal)
+        img_text.append([hit_pair[0], (480, 245 + temp_offset), font_normal, color_main])
+        img_text.append([hit_pair[1], (690, 240 + temp_offset), font_normal, color_main])
         temp_offset += 62
 
     #  date
-    test_temp += ['@', (41, 18), font_normal]
-    text_canvas, temp_text_length = await draw_text_glow('@', text_canvas, (390, 444), font=font_xsmall,
-                                                         font_clr=color_secondary)
-    test_temp += [play_date, (41, 18), font_normal]
-    text_canvas, _ = await draw_text_glow(play_date, text_canvas, (390 + temp_text_length, 445), font=font_xsmall,
-                                          font_clr=dom_colors[2])
+    img_text.append(['@', (390, 444), font_xsmall, color_secondary])
+    img_text.append([play_date, (390 + draw_text.textlength('@', font_xsmall), 445), font_xsmall, dom_colors[2]])
 
     #  pp
-    test_temp += [pp['play_pp'], (41, 18), font_normal]
-    text_canvas, temp_text_length = await draw_text_glow(pp['play_pp'], text_canvas, (860, 410), font=font_xlarge,
-                                                         font_clr=dom_colors[3])
-    test_temp += [f'/{pp["fc_pp"]} PP', (41, 18), font_normal]
-    text_canvas, _ = await draw_text_glow(f'/{pp["fc_pp"]} PP', text_canvas, (860 + temp_text_length, 450),
-                                          font=font_small)
+    img_text.append([play_pp, (860, 410), font_xlarge, dom_colors[3]])
+    img_text.append(
+        [f'/{str(round(map_info["fc_pp"]))} PP', (860 + draw_text.textlength(play_pp, font_xlarge), 450), font_small,
+         color_main])
 
-    # map stats
-    test_temp += [map_stats['star_rating'], (41, 18), font_normal]
-    text_canvas, temp_text_length = await draw_text_glow(map_stats['star_rating'], text_canvas, (1160, 240),
-                                                         font=font_large, font_clr=dom_colors[2])
-    test_temp += ['★', (41, 18), font_normal]
-    text_canvas, _ = await draw_text_glow('★', text_canvas, (1160 + temp_text_length, 250), font=symbol_font,
-                                          font_clr=dom_colors[2])
+    #  map stats
+    img_text.append([str(round(map_info['star_rating'], 1)), (1160, 240), font_large, dom_colors[2]])
+    img_text.append(
+        ['★', (1160 + draw_text.textlength(str(round(map_info['star_rating'], 1)), font_large), 250), symbol_font,
+         dom_colors[2]])
+    img_text.append([str(int(map_info['bpm'])), (1322, 240), font_large, color_main])
+    img_text.append(
+        [' BPM', (1322 + draw_text.textlength(str(int(map_info['bpm'])), font_large), 265), font_small, color_main])
+    img_text.append([str(round(map_info['ar'], 1)), (1200, 307), font_large, color_main])
+    img_text.append([str(round(map_info['od'], 1)), (1362, 307), font_large, color_main])
+    img_text.append([str(round(map_info['hp'], 1)), (1200, 372), font_large, color_main])
+    img_text.append([str(round(map_info['cs'], 1)), (1362, 372), font_large, color_main])
+    #  mapper
+    img_text.append(['By ', (1160, 445), font_small, color_secondary])
+    img_text.append(
+        [play_info['beatmapset']['creator'], (1160 + draw_text.textlength('By ', font_small), 445), font_small,
+         dom_colors[2]])
 
-    test_temp += [map_stats['bpm'], (41, 18), font_normal]
-    text_canvas, temp_text_length = await draw_text_glow(map_stats['bpm'], text_canvas, (1322, 240), font=font_large)
-    test_temp += [' BPM', (41, 18), font_normal]
-    text_canvas, _ = await draw_text_glow(' BPM', text_canvas, (1322 + temp_text_length, 265), font=font_small)
+    for item in img_text:
+        draw_text.text(item[1], item[0], font=item[2], fill=item[3])
 
-    test_temp += [map_stats['ar'], (41, 18), font_normal]
-    text_canvas, _ = await draw_text_glow(map_stats['ar'], text_canvas, (1200, 307), font=font_large)
-    test_temp += [map_stats['od'], (41, 18), font_normal]
-    text_canvas, _ = await draw_text_glow(map_stats['od'], text_canvas, (1362, 307), font=font_large)
-    test_temp += [map_stats['hp'], (41, 18), font_normal]
-    text_canvas, _ = await draw_text_glow(map_stats['hp'], text_canvas, (1200, 372), font=font_large)
-    test_temp += [map_stats['cs'], (41, 18), font_normal]
-    text_canvas, _ = await draw_text_glow(map_stats['cs'], text_canvas, (1362, 372), font=font_large)
-
-    test_temp += ['By ', (41, 18), font_normal]
-    text_canvas, temp_text_length = await draw_text_glow('By ', text_canvas, (1160, 445), font=font_small,
-                                                         font_clr=color_secondary)
-    test_temp += [mapper, (41, 18), font_normal]
-    text_canvas, _ = await draw_text_glow(mapper, text_canvas, (1160 + temp_text_length, 445), font=font_small,
-                                          font_clr=dom_colors[2])
+    #  draw shadows
+    shadow_canvas = Image.new('RGBA', (size[2], size[3]))
+    draw_shadow = ImageDraw.Draw(shadow_canvas)
+    for item in img_text:
+        draw_shadow.text(item[1], item[0], font=item[2], fill=(0, 0, 0, 255))
+    shadow_canvas = shadow_canvas.filter(ImageFilter.GaussianBlur(5))
 
     #  paste images
     img_canvas = Image.new('RGBA', (size[2], size[3]), color=(0, 0, 0, 0))
@@ -277,11 +253,9 @@ async def score_image(play_info, map_bg, map_info):
     img_canvas.paste(grade_icon, (865, 135))
 
     #  mods
-    if not mods:
-        text_canvas, _ = await draw_text_glow('-', text_canvas, (620, 173), font=font_large)
-    else:
+    if play_info['mods']:
         temp_offset = 0
-        for mod in mods:
+        for mod in play_info['mods']:
             icon = await osu_utils.get_mod_icon(mod)
             img_canvas.paste(icon, (612 + temp_offset, 173))
             temp_offset += 65
@@ -297,32 +271,19 @@ async def score_image(play_info, map_bg, map_info):
 
     #  thumbnail
     thumbnail_size = (325, 187)
-    thumbnail_bg = ImageEnhance.Brightness(map_bg.resize(thumbnail_size, Image.LANCZOS).filter(ImageFilter.GaussianBlur(3))).enhance(.8)
+    thumbnail_bg = ImageEnhance.Brightness(
+        map_bg.resize(thumbnail_size, Image.LANCZOS).filter(ImageFilter.GaussianBlur(3))).enhance(.8)
     thumbnail = await other_utils.resize_image(map_bg, thumbnail_size)
     temp_offset = round((thumbnail_bg.width - thumbnail.width) / 2)
     img_canvas.paste(thumbnail_bg, (1160, 18))
     img_canvas.paste(thumbnail, (1160 + temp_offset, 18))
 
     background = Image.alpha_composite(background, boxes_canvas)
+    background = Image.alpha_composite(background, shadow_canvas)
     background = Image.alpha_composite(background, text_canvas)
     background = Image.alpha_composite(background, img_canvas)
 
     return background
-
-
-async def draw_text_glow(text, image, position: tuple[float, float], font, font_clr=(255, 255, 255, 255),
-                         glow_clr=(0, 0, 0, 255), blur_r=5):
-    text_canvas = Image.new('RGBA', image.size)
-    draw = ImageDraw.Draw(text_canvas)
-    draw.text(position, text, font=font, fill=glow_clr)
-
-    text_canvas = text_canvas.filter(ImageFilter.GaussianBlur(blur_r))
-    draw = ImageDraw.Draw(text_canvas)
-    draw.text(position, text, font=font, fill=font_clr)
-
-    text_length = draw.textlength(text, font)
-    image = Image.alpha_composite(image, text_canvas)
-    return image, text_length
 
 
 async def banner_enhancer(img, scale, size, blur_radius=10, brightness_scale=.5):

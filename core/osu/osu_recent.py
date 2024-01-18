@@ -91,7 +91,9 @@ class OsuRecent(Osu):
             play_fin = play_list[0]
 
         if options['image']:
-            return await self.recent_answer_image(play_fin, user_info)
+            if gamemode == 'osu':
+                return await self.recent_answer_image(play_fin, user_info)
+            return {'answer', f'Not supported for {self.mode_names[gamemode]}'}
 
         if options['best']:
             answer_type = f'Top {str(play_fin["index"] + 1)}'
@@ -149,11 +151,11 @@ class OsuRecent(Osu):
         # ,'keyboard': pagination_kb.get_pagination_kb(data=data)
 
     async def recent_answer_image(self, play_info, user_info):
-        banner = await self.nerinyanAPI.get_beatmap_background(play_info['beatmap']['id'])
+        map_bg = await self.nerinyanAPI.get_beatmap_background(play_info['beatmap']['id'])
         beatmap = await self.osuAPI.get_beatmap(play_info['beatmap']['id'])
         filepath = await self.osuAPI.download_beatmap(beatmap_info=beatmap, api='nerinyan')
         map_info = await osu_utils.get_full_play_info(filepath, play_info)
-        image = await drawing.score_image(play_info, banner, map_info)
-        image_bytes = await other_utils.pillow_image_to_bytes(image, self.bytes_buffer)
+        image = await drawing.score_image(play_info, map_bg, map_info)
+        image_bytes = await other_utils.image_to_bytes(image, self.bytes_buffer)
         answer = f"{flag(user_info['country_code'])} Recent {self.mode_names[play_info['mode']]} Play for {user_info['username']}\n"
         return {'answer': answer, 'photo': BufferedInputFile(image_bytes, filename='plot.png')}

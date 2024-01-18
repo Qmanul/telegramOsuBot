@@ -162,7 +162,7 @@ class OsuInfo(Osu):
                 text += text_extra_info
 
             plot = await drawing.plot_profile(user)
-            plot_bytes = await other_utils.pillow_image_to_bytes(plot, self.bytes_buffer)
+            plot_bytes = await other_utils.image_to_bytes(plot, self.bytes_buffer)
             answer += header
             answer += text
             answer += footer

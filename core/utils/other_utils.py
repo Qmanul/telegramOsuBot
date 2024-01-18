@@ -5,7 +5,6 @@ from dateutil.relativedelta import relativedelta
 
 
 async def get_image_by_url(url):
-
     from aiogram.client.session import aiohttp
 
     async with aiohttp.ClientSession(auto_decompress=False) as session:
@@ -41,9 +40,14 @@ async def format_date(date_str):
     return result
 
 
-async def pillow_image_to_bytes(image, buffer):
+async def image_to_bytes(image, buffer):
     image.save(buffer, format='PNG')
     buffer.seek(0)
     img_byte_arr = buffer.getvalue()
     buffer.truncate(0)
     return img_byte_arr
+
+
+async def resize_image(image, size):
+    image.thumbnail(size, Image.LANCZOS)
+    return image

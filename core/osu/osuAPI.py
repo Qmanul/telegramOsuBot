@@ -165,7 +165,6 @@ class officialAPIV2(object):
         uri_base = f'beatmaps/{bmap_id}?'
 
         url = self.base.format(uri_base)
-
         res = await self.fetch(url)
 
         return res

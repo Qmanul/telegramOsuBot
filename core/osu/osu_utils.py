@@ -169,4 +169,4 @@ async def get_version_icon(star_rating, gamemode):
     else:
         star_rating = round(star_rating, 1)
     path = os.path.join(os.getcwd(), 'core', 'osu', 'images', 'diff_icons', gamemode, f'{star_rating}.png')
-    return Image.open(path)
+    return Image.open(path).resize((40, 40), Image.LANCZOS)

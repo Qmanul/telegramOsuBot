@@ -1,6 +1,7 @@
 import io
 import os
 
+import emoji
 import scipy.cluster
 import sklearn.cluster
 import numpy
@@ -107,34 +108,37 @@ async def score_image(play_info, map_bg, map_info):
     username = play_info['user']['username']
     score = format(play_info['score'], ',')
     combo = {
-        'play_combo': play_info['max_combo'],
-        'max_combo': map_info['max_combo']
+        'play_combo': str(play_info['max_combo']),
+        'max_combo': str(map_info['max_combo'])
     }
-    accuracy = round(play_info['accuracy'] * 100, 2)
+    accuracy = str(round(play_info['accuracy'] * 100, 2))
     hit_count = play_info['statistics']
-    play_date = f'@ {datetime.fromisoformat(play_info["created_at"][:-1]).strftime("%Y-%m-%d %H:%M:%S")} UTC'
+    play_date = f' {datetime.fromisoformat(play_info["created_at"][:-1]).strftime("%Y-%m-%d %H:%M:%S")} UTC'
     pp = {
-        'play_pp': round(play_info['pp']) if play_info['pp'] else map_info['pp'],
-        'fc_pp': map_info['fc_pp']
+        'play_pp': str(round(play_info['pp'])) if play_info['pp'] else str(round(map_info['pp'])),
+        'fc_pp': str(round(map_info['fc_pp']))
     }
     map_stats = {
-        'star_rating': map_info['star_rating'],
-        'bpm': map_info['bpm'],
-        'ar': map_info['ar'],
-        'od': map_info['od'],
-        'hp': map_info['hp'],
-        'cs': map_info['cs'],
+        'star_rating': str(round(map_info['star_rating'], 2)) if map_info['star_rating'] < 10 else str(
+            round(map_info['star_rating'], 1)),
+        'bpm': str(int(map_info['bpm'])),
+        'ar': str(map_info['ar']),
+        'od': str(map_info['od']),
+        'hp': str(map_info['hp']),
+        'cs': str(map_info['cs'])
     }
     mapper = play_info['beatmapset']['creator']
 
     size = (0, 0, 1500, 500)
     map_bg = Image.open(io.BytesIO(map_bg)).convert('RGBA')
     main_colors = await dominant_colors(map_bg)
+    color_secondary = (100, 100, 100, 200)
     scale = max(size[2] / map_bg.width, size[3] / map_bg.height)
     background = await banner_enhancer(map_bg, scale, size, brightness_scale=.7)
     version_icon = await osu_utils.get_version_icon(map_info['star_rating'], play_info['mode'])
 
     font_main_path = os.path.join(os.getcwd(), 'core', 'osu', 'fonts', 'Asimov.ttf')
+    symbol_font_path = os.path.join(os.getcwd(), 'core', 'osu', 'fonts', 'Symbola.ttf')
     img_path = os.path.join(os.getcwd(), 'core', 'osu', 'images')
 
     #  draw boxes
@@ -153,10 +157,12 @@ async def score_image(play_info, map_bg, map_info):
     #  draw labels
     text_canvas = Image.new('RGBA', (size[2], size[3]), color=(0, 0, 0, 0))
     draw_text = ImageDraw.Draw(text_canvas)
+    font_xlarge = ImageFont.truetype(font_main_path, 70)
     font_large = ImageFont.truetype(font_main_path, 60)
     font_normal = ImageFont.truetype(font_main_path, 40)
     font_small = ImageFont.truetype(font_main_path, 30)
-    font_xsmall = ImageFont.truetype(font_main_path, 18)
+    font_xsmall = ImageFont.truetype(font_main_path, 20)
+    symbol_font = ImageFont.truetype(symbol_font_path, 60)
     font_clr = (200, 200, 200, 200)
 
     labels = {
@@ -176,16 +182,68 @@ async def score_image(play_info, map_bg, map_info):
         draw_text.text(label_coordinates, label_text, font=font_xsmall, fill=font_clr)
 
     #  title
+    if len(map_title) >= 60:
+        map_title = f'{map_title[:55]}...'
     text_canvas, _ = await draw_text_glow(map_title, text_canvas, (41, 18), font=font_normal)
 
     #  difficulty
-    text_canvas.paste(version_icon, (50, 75))
-    text_canvas, version_length = await draw_text_glow(version, text_canvas, (95, 70), font=font_normal)
+    if len(version) >= 50:
+        version = f'{version[:45]}...'
+    text_canvas, version_text_length = await draw_text_glow(version, text_canvas, (95, 70), font=font_normal,
+                                                            font_clr=main_colors[1])
+    text_canvas, temp_text_length = await draw_text_glow('played by', text_canvas, (100 + version_text_length, 70),
+                                                         font=font_normal, font_clr=color_secondary)
+    text_canvas, _ = await draw_text_glow(username, text_canvas, (105 + version_text_length + temp_text_length, 70),
+                                          font=font_normal, font_clr=main_colors[1])
 
+    #  score
+    text_canvas, _ = await draw_text_glow(score, text_canvas, (40, 170), font=font_large)
 
+    #  combo
+    text_canvas, temp_text_length = await draw_text_glow(combo['play_combo'], text_canvas, (40, 280), font=font_large)
+    text_canvas, _ = await draw_text_glow(f"/{combo['max_combo']}", text_canvas, (40 + temp_text_length, 310),
+                                          font=font_small)
+
+    #  accuracy
+    text_canvas, temp_text_length = await draw_text_glow(accuracy, text_canvas, (390, 170), font=font_large)
+    text_canvas, _ = await draw_text_glow(' %', text_canvas, (390 + temp_text_length, 200), font=font_small)
+
+    #  date
+    text_canvas, temp_text_length = await draw_text_glow('@', text_canvas, (390, 444), font=font_xsmall,
+                                                         font_clr=color_secondary)
+    text_canvas, _ = await draw_text_glow(play_date, text_canvas, (390 + temp_text_length, 445), font=font_xsmall,
+                                          font_clr=main_colors[1])
+
+    #  pp
+    text_canvas, temp_text_length = await draw_text_glow(pp['play_pp'], text_canvas, (860, 410), font=font_xlarge,
+                                                         font_clr=main_colors[2])
+    text_canvas, _ = await draw_text_glow('/' + pp['fc_pp'], text_canvas, (860 + temp_text_length, 450),
+                                          font=font_small)
+
+    # map stats
+    text_canvas, temp_text_length = await draw_text_glow(map_stats['star_rating'], text_canvas, (1160, 240),
+                                                         font=font_large, font_clr=main_colors[1])
+    text_canvas, _ = await draw_text_glow('★', text_canvas, (1160 + temp_text_length, 250), font=symbol_font,
+                                          font_clr=main_colors[1])
+
+    text_canvas, temp_text_length = await draw_text_glow(map_stats['bpm'], text_canvas, (1315, 240), font=font_large)
+    text_canvas, _ = await draw_text_glow(' BPM', text_canvas, (1315 + temp_text_length, 265), font=font_small)
+
+    text_canvas, _ = await draw_text_glow(map_stats['ar'], text_canvas, (1200, 307), font=font_large)
+    text_canvas, _ = await draw_text_glow(map_stats['od'], text_canvas, (1362, 307), font=font_large)
+    text_canvas, _ = await draw_text_glow(map_stats['hp'], text_canvas, (1200, 372), font=font_large)
+    text_canvas, _ = await draw_text_glow(map_stats['cs'], text_canvas, (1362, 372), font=font_large)
+
+    text_canvas, temp_text_length = await draw_text_glow('By ', text_canvas, (1160, 445), font=font_small,
+                                                         font_clr=color_secondary)
+    text_canvas, _ = await draw_text_glow(mapper, text_canvas, (1160 + temp_text_length, 445), font=font_small,
+                                          font_clr=main_colors[1])
 
     background = Image.alpha_composite(background, text_canvas)
 
+    #  draw images text_canvas.paste(version_icon, (50, 75))
+    img_canvas = Image.new('RGBA', (size[2], size[3]), color=(0, 0, 0, 0))
+    draw_img = ImageDraw.Draw(img_canvas)
     return background
 
 

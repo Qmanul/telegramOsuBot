@@ -102,7 +102,6 @@ async def plot_profile(user):
 # TODO
 async def score_image(play_info, map_bg, map_info):
     #  gather info
-    img_text = []
     map_title = f'{play_info["beatmapset"]["artist"]} - {play_info["beatmapset"]["title"]}'
     if len(map_title) >= 60:
         map_title = f'{map_title[:55]}...'
@@ -156,7 +155,7 @@ async def score_image(play_info, map_bg, map_info):
     symbol_font = ImageFont.truetype(symbol_font_path, 60)
     font_clr = (200, 200, 200, 200)
 
-    labels = {
+    text_without_shadow = {
         'SCORE': (40, 150),
         'COMBO': (40, 260),
         'GRAPH': (40, 370),
@@ -169,81 +168,83 @@ async def score_image(play_info, map_bg, map_info):
         'HP': (1160, 380),
         'CS': (1322, 380)
     }
-    for label_text, label_coordinates in labels.items():
+    for label_text, label_coordinates in text_without_shadow.items():
         draw_text.text(label_coordinates, label_text, font=font_xsmall, fill=font_clr)
 
+    text_with_shadow = []
     #  title
-    img_text.append([map_title, (41, 18), font_normal, color_main])
+    text_with_shadow.append([map_title, (41, 18), font_normal, color_main])
 
     #  difficulty
-    img_text.append([version, (95, 70), font_normal, dom_colors[2]])
-    img_text.append(['played by', (100 + draw_text.textlength(version, font_normal), 70), font_normal, color_secondary])
-    img_text.append([play_info['user']['username'], (
+    text_with_shadow.append([version, (95, 70), font_normal, dom_colors[2]])
+    text_with_shadow.append(['played by', (100 + draw_text.textlength(version, font_normal), 70), font_normal, color_secondary])
+    text_with_shadow.append([play_info['user']['username'], (
                     105 + draw_text.textlength(version, font_normal) + draw_text.textlength('played by', font_normal), 70),
-                    font_normal, dom_colors[2]])
+                             font_normal, dom_colors[2]])
 
     #  score
-    img_text.append([format(play_info['score'], ','), (40, 170), font_large, color_main])
+    text_with_shadow.append([format(play_info['score'], ','), (40, 170), font_large, color_main])
 
     #  combo
-    img_text.append([str(play_info['max_combo']), (40, 280), font_large, color_main])
-    img_text.append(
+    text_with_shadow.append([str(play_info['max_combo']), (40, 280), font_large, color_main])
+    text_with_shadow.append(
         [f"/{str(map_info['max_combo'])}", (40 + draw_text.textlength(str(play_info['max_combo']), font_large), 310),
          font_small, color_main])
 
     #  accuracy
-    img_text.append([accuracy, (390, 170), font_large, color_main])
-    img_text.append([' %', (390 + draw_text.textlength(accuracy, font_large), 200), font_small, color_main])
+    text_with_shadow.append([accuracy, (390, 170), font_large, color_main])
+    text_with_shadow.append([' %', (390 + draw_text.textlength(accuracy, font_large), 200), font_small, color_main])
 
     #  mods
     if not play_info['mods']:
-        img_text.append(['-', (620, 173), font_large, color_main])
+        text_with_shadow.append(['-', (620, 173), font_large, color_main])
     #  hit text
     temp_offset = 0
     for hit_pair in hit_count:
-        img_text.append([hit_pair[0], (480, 245 + temp_offset), font_normal, color_main])
-        img_text.append([hit_pair[1], (690, 240 + temp_offset), font_normal, color_main])
+        text_with_shadow.append([hit_pair[0], (480, 245 + temp_offset), font_normal, color_main])
+        text_with_shadow.append([hit_pair[1], (690, 240 + temp_offset), font_normal, color_main])
         temp_offset += 62
 
     #  date
-    img_text.append(['@', (390, 444), font_xsmall, color_secondary])
-    img_text.append([play_date, (390 + draw_text.textlength('@', font_xsmall), 445), font_xsmall, dom_colors[2]])
+    text_with_shadow.append(['@', (390, 444), font_xsmall, color_secondary])
+    text_with_shadow.append([play_date, (390 + draw_text.textlength('@', font_xsmall), 445), font_xsmall, dom_colors[2]])
 
     #  pp
-    img_text.append([play_pp, (860, 410), font_xlarge, dom_colors[3]])
-    img_text.append(
+    text_with_shadow.append([play_pp, (860, 410), font_xlarge, dom_colors[3]])
+    text_with_shadow.append(
         [f'/{str(round(map_info["fc_pp"]))} PP', (860 + draw_text.textlength(play_pp, font_xlarge), 450), font_small,
          color_main])
 
     #  map stats
-    img_text.append([str(round(map_info['star_rating'], 1)), (1160, 240), font_large, dom_colors[2]])
-    img_text.append(
+    text_with_shadow.append([str(round(map_info['star_rating'], 1)), (1160, 240), font_large, dom_colors[2]])
+    text_with_shadow.append(
         ['★', (1160 + draw_text.textlength(str(round(map_info['star_rating'], 1)), font_large), 250), symbol_font,
          dom_colors[2]])
-    img_text.append([str(int(map_info['bpm'])), (1322, 240), font_large, color_main])
-    img_text.append(
+    text_with_shadow.append([str(int(map_info['bpm'])), (1322, 240), font_large, color_main])
+    text_with_shadow.append(
         [' BPM', (1322 + draw_text.textlength(str(int(map_info['bpm'])), font_large), 265), font_small, color_main])
-    img_text.append([str(round(map_info['ar'], 1)), (1200, 307), font_large, color_main])
-    img_text.append([str(round(map_info['od'], 1)), (1362, 307), font_large, color_main])
-    img_text.append([str(round(map_info['hp'], 1)), (1200, 372), font_large, color_main])
-    img_text.append([str(round(map_info['cs'], 1)), (1362, 372), font_large, color_main])
+    text_with_shadow.append([str(round(map_info['ar'], 1)), (1200, 307), font_large, color_main])
+    text_with_shadow.append([str(round(map_info['od'], 1)), (1362, 307), font_large, color_main])
+    text_with_shadow.append([str(round(map_info['hp'], 1)), (1200, 372), font_large, color_main])
+    text_with_shadow.append([str(round(map_info['cs'], 1)), (1362, 372), font_large, color_main])
+
     #  mapper
-    img_text.append(['By ', (1160, 445), font_small, color_secondary])
-    img_text.append(
+    text_with_shadow.append(['By ', (1160, 445), font_small, color_secondary])
+    text_with_shadow.append(
         [play_info['beatmapset']['creator'], (1160 + draw_text.textlength('By ', font_small), 445), font_small,
          dom_colors[2]])
 
-    for item in img_text:
+    for item in text_with_shadow:
         draw_text.text(item[1], item[0], font=item[2], fill=item[3])
 
     #  draw shadows
-    shadow_canvas = Image.new('RGBA', (size[2], size[3]))
+    shadow_canvas = Image.new('RGBA', (size[2], size[3]), color=(0, 0, 0, 0))
     draw_shadow = ImageDraw.Draw(shadow_canvas)
-    for item in img_text:
+    for item in text_with_shadow:
         draw_shadow.text(item[1], item[0], font=item[2], fill=(0, 0, 0, 255))
     shadow_canvas = shadow_canvas.filter(ImageFilter.GaussianBlur(5))
 
-    #  paste images
+    #  draw images
     img_canvas = Image.new('RGBA', (size[2], size[3]), color=(0, 0, 0, 0))
 
     #  version
@@ -278,6 +279,7 @@ async def score_image(play_info, map_bg, map_info):
     img_canvas.paste(thumbnail_bg, (1160, 18))
     img_canvas.paste(thumbnail, (1160 + temp_offset, 18))
 
+    #  compose everything
     background = Image.alpha_composite(background, boxes_canvas)
     background = Image.alpha_composite(background, shadow_canvas)
     background = Image.alpha_composite(background, text_canvas)

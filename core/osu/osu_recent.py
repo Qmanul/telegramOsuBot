@@ -101,7 +101,6 @@ class OsuRecent(Osu):
         else:
             answer_type = 'Recent'
             tries_count = await osu_utils.get_number_of_tries(play_list, play_fin['beatmap']['id'])
-        print(123)
         return await self.recent_answer(user_info, play_fin, gamemode, answer_type, tries_count)
 
     async def recent_answer(self, user_info, play_info, gamemode, answer_type, tries_count):

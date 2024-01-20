@@ -5,12 +5,11 @@ from aiogram import types
 
 from core.osu.osu_recent import OsuRecent
 
-
 user_scores_router = Router()
 osu = OsuRecent()
 
 
-@user_scores_router.message(Command("recent", "rs", prefix=">"))
+@user_scores_router.message(Command("recent", "rs", prefix="/>"))
 async def cmd_recent(message: types.Message, command: CommandObject):
     answer = await osu.process_user_recent(message.from_user, command.args)
     if 'photo' in answer:
